@@ -2,6 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
+from folium.plugins import Search  # Memanggil plugin pencarian peta otomatis
 
 st.set_page_config(layout="wide")
 st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
@@ -50,16 +51,30 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# 5. FITUR HOVER TOOLTIP: Nama desa HANYA muncul saat disorot (100% Anti-Kabut & Bersih)
+# 5. BARU: MENAMBAHKAN FITUR KOLOM PENCARIAN (SEARCH BAR)
+# Mengindeks layer GeoJSON berdasarkan kolom 'KEL_DES' (Nama Desa)
+peta_search = Search(
+    layer=choro_layer,
+    geom_type="Polygon",
+    placeholder="Cari nama desa/kelurahan...", # Teks pembuka di kolom input
+    collapsed=False,                            # Membuat kolom pencarian langsung terbuka lebar
+    search_label="KEL_DES",                     # Kolom GeoJSON yang dijadikan target ketik
+    search_zoom=14,                             # Tingkat kedekatan zoom otomatis saat lokasi ditemukan
+    weight=3,
+    fill_color="#ff7800",                       # Efek warna wilayah saat terpilih di hasil pencarian
+    fill_opacity=0.4
+).add_to(m)
+
+# 6. FITUR HOVER TOOLTIP: Nama desa muncul dinamis saat kursor menyentuh wilayah (Anti-Kabut)
 folium.features.GeoJsonTooltip(
-    fields=["KEL_DES"],
-    aliases=["Desa/Kelurahan: "],
+    fields=["KEL_DES", "KEC"],
+    aliases=["Desa/Kelurahan: ", "Kecamatan: "],
     labels=True,
-    sticky=True, # Tulisan menempel mengikuti pergerakan kursor Anda
+    sticky=True,
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# 6. MENAMBAHKAN KOTAK LEGENDA SOLID (TIDAK TRANSPARAN)
+# 7. MENAMBAHKAN KOTAK LEGENDA SOLID (TIDAK TRANSPARAN)
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -83,12 +98,12 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# 7. Menambahkan Fitur Pop-up saat wilayah diklik (Menampilkan data lengkap)
+# 8. Menambahkan Fitur Pop-up saat wilayah diklik
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk"],
     aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
     localize=True
 ).add_to(choro_layer)
 
-# 8. Tampilkan peta ke web Streamlit
+# 9. Tampilkan peta ke web Streamlit
 st_folium(m, height=650, use_container_width=True)
