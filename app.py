@@ -70,7 +70,7 @@ kecamatan_terpilih = st.selectbox(
 # Menyesuaikan opsi pilihan desa berdasarkan kecamatan yang aktif
 if kecamatan_terpilih != "-- Semua Kecamatan --":
     # Jika kecamatan tertentu dipilih, filter data frame sementara dan ambil desa di kecamatan itu saja
-    df_kec = df[df['Kecamatan'] == kecamatan_terpilih]
+    df_kec = df[df['Kecamatan'] == kecamatan_terpilled] if 'df_kec' in locals() else df[df['Kecamatan'] == kecamatan_terpilih]
     daftar_desa = sorted(df_kec['Desa'].unique())
 else:
     # Jika memilih Semua Kecamatan, tampilkan opsi seluruh desa di Kabupaten Lamongan
@@ -148,7 +148,7 @@ with col4:
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # ==========================================
-# 6. MEMBANGUN PETA FOLIUM DENGAN GEOMETRI DILTER
+# 6. MEMBANGUN PETA FOLIUM DENGAN GEOMETRI FILTER
 # ==========================================
 m = folium.Map(
     location=[-7.12, 112.41], 
@@ -251,7 +251,5 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# Pop-up detail informasi saat poligon desa diklik
+# Pop-up detail informasi saat poligon desa diklik (Tanda Kurung Sudah Ditutup Sempurna)
 folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "laki_laki", "perempuan", "jumlah_penduduk"],
-    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Laki-laki: ", "Perempuan: ", "Jumlah Penduduk: "],
