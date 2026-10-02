@@ -10,8 +10,13 @@ st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 with open("kab_lamongan_popmap.geojson", "r") as f:
     geo_data = json.load(f)
 
-# 2. Buat objek peta dengan OpenStreetMap (OSM) asli
-m = folium.Map(location=[-7.12, 112.41], zoom_start=10, tiles="OpenStreetMap")
+# 2. Buat objek peta dengan OpenStreetMap (OSM) asli + AKTIFKAN KONTROL SKALA PETA
+m = folium.Map(
+    location=[-7.12, 112.41], 
+    zoom_start=10, 
+    tiles="OpenStreetMap",
+    control_scale=True  # <-- Baris ini otomatis memunculkan skala meter/kilometer di pojok kiri bawah peta
+)
 
 # 3. Fungsi mewarnai peta otomatis berdasarkan angka penduduk desa
 def ganti_warna(fitur):
