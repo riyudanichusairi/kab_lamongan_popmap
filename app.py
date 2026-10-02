@@ -12,11 +12,13 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # PERBAIKAN: Memasukkan angka 3 ke dalam st.columns agar kebal dari TypeError
-    col_left, col_center, col_right = st.columns(3)
+    # PERBAIKAN: Mengatur rasio kolom (1.5 untuk kiri/kanan, 7 untuk tengah) 
+    # agar kolom tengah lebih luas sehingga gambar logo bisa membesar pas di tengah
+    col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
-        st.image("logo_lamongan.png", use_container_width=True) 
+        # PERBAIKAN: use_column_width=True agar logo membesar memenuhi kolom tengah yang baru
+        st.image("logo_lamongan.png", use_column_width=True) 
     
     st.title("WebGIS Lamongan")
     st.write(
@@ -213,6 +215,5 @@ with st.sidebar:
     st.write("🔗 **Bagikan WebGIS Ini:**")
     url_webgis = "https://streamlit.app"
     
-    if st.button("📋 Klik untuk Salin Tautan", use_container_width=True):
-        st.code(url_webgis, language="text")
-        st.success("Tautan muncul di atas! Silakan klik ikon kotak di kanan teks untuk menyalin ke HP.")
+    if st.button("📋 Klik untuk Tampilkan Tautan", use_container_width=True):
+        st.success(f"Salin tautan ini: {url_webgis}")
