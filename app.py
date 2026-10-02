@@ -12,8 +12,12 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # Menggunakan file logo lokal yang sudah Anda unggah di GitHub
-    st.image("logo_lamongan.png", width=120) 
+    # Trik 3 kolom virtual untuk menyeimbangkan posisi logo tepat di tengah sidebar
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+    with col_center:
+        st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
+        st.image("logo_lamongan.png", use_container_width=True) 
+    
     st.title("WebGIS Lamongan")
     st.write(
         "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
