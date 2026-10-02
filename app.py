@@ -13,29 +13,41 @@ with open("kab_lamongan_popmap.geojson", "r") as f:
 # 2. Buat objek peta folium dasar
 m = folium.Map(location=[-7.12, 112.41], zoom_start=10, tiles="CartoDB positron")
 
-# 3. Membuat Peta Kloroplet & Pop-up Informasi
-# PENTING: Ganti 'KECAMATAN' dan 'penduduk' sesuai nama kolom asli di file GeoJSON Anda
-choro = folium.Choropleth(
-    geo_data=geo_data,
+# 3. Fungsi untuk menentukan gradasi warna berdasarkan jumlah penduduk
+# PENTING: Silakan sesuaikan nilai angka pemisah (10000, 30000, dst) dengan rentang asli data Anda
+def ganti_warna(fitur):
+    # Ambil nilai angka dari properti GeoJSON Anda. 
+    # PASTIKAN nama 'penduduk' di bawah ini huruf kecil/besarnya sama persis dengan yang ada di file GeoJSON Anda
+    jumlah_pop = fitur['properties'].get('penduduk', 0)
+    
+    if jumlah_pop > 50000:
+        return {'fillColor': '#800026', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7} # Merah Tua
+    elif jumlah_pop > 40000:
+        return {'fillColor': '#BD0026', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7}
+    elif jumlah_pop > 30000:
+        return {'fillColor': '#E31A1C', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7}
+    elif jumlah_pop > 20000:
+        return {'fillColor': '#FC4E2A', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7}
+    elif jumlah_pop > 10000:
+        return {'fillColor': '#FD8D3C', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7}
+    else:
+        return {'fillColor': '#FFEDA0', 'color': '#ffffff', 'weight': 1, 'fillOpacity': 0.7} # Kuning Muda
+
+# 4. Memasukkan data GeoJSON dengan fungsi pewarnaan kloroplet dan pop-up
+choro_layer = folium.GeoJson(
+    geo_data,
     name="Kloroplet Penduduk",
-    data=geo_data,
-    columns=["properties.KECAMATAN", "properties.penduduk"], # Kolom wilayah & data angka
-    key_on="feature.properties.KECAMATAN",                 # Kunci penghubung GeoJSON
-    fill_color="YlOrRd",                                    # Gradasi warna (Kuning ke Merah)
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    legend_name="Jumlah Penduduk (Jiwa)",
-    highlight=True                                          # Efek menyala saat kursor di atasnya
+    style_function=ganti_warna,
+    highlight_function=lambda x: {'weight': 3, 'color': '#000000', 'fillOpacity': 0.8} # Efek tebal hitam saat disorot kursor
 ).add_to(m)
 
-# 4. Menambahkan Fitur Pop-up saat Kecamatan diklik
-choro.geojson.add_child(
-    folium.features.GeoJsonPopup(
-        fields=["KECAMATAN", "penduduk"],                   # Kolom yang ingin ditampilkan di pop-up
-        aliases=["Kecamatan: ", "Jumlah Penduduk: "],       # Label teks di dalam kotak pop-up
-        localize=True
-    )
-)
+# 5. Menambahkan Fitur Pop-up saat Kecamatan diklik
+# PASTIKAN nama 'KECAMATAN' dan 'penduduk' sesuai dengan struktur kolom di file GeoJSON Anda
+folium.features.GeoJsonPopup(
+    fields=["KECAMATAN", "penduduk"],
+    aliases=["Kecamatan: ", "Jumlah Penduduk (Jiwa): "],
+    localize=True
+).add_to(choro_layer)
 
-# 5. Tampilkan peta ke web Streamlit
+# 6. Tampilkan peta ke web Streamlit
 st_folium(m, width=1000, height=600)
