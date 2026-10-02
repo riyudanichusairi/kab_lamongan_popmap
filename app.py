@@ -13,7 +13,7 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # ==========================================
 with st.sidebar:
     # Trik 3 kolom virtual untuk menyeimbangkan posisi logo tepat di tengah sidebar
-    col_left, col_center, col_right = st.columns([1, 2, 1])
+    col_left, col_center, col_right = st.columns()
     with col_center:
         st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
         st.image("logo_lamongan.png", use_container_width=True) 
@@ -209,7 +209,7 @@ df_kecamatan = df_kecamatan.sort_values(by='Jumlah Penduduk', ascending=False)
 st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_container_width=True)
 
 # ==========================================
-# 5. BUTTON UNDUH DATA PADA SIDEBAR
+# 5. BUTTON UNDUH & SALIN URL PADA SIDEBAR
 # ==========================================
 with st.sidebar:
     csv_data = df.to_csv(index=False).encode('utf-8')
@@ -220,3 +220,13 @@ with st.sidebar:
         mime="text/csv",
         use_container_width=True
     )
+    
+    # BARU: MENAMBAHKAN FITUR UTK MENYALIN URL WEBGIS SECARA INSTAN
+    st.markdown("---")
+    st.write("🔗 **Bagikan WebGIS Ini:**")
+    url_webgis = "https://streamlit.app"
+    
+    # Membuat tombol klik salin otomatis bawaan Streamlit
+    if st.button("📋 Klik untuk Salin Tautan", use_container_width=True):
+        st.code(url_webgis, language="text")
+        st.success("Tautan muncul di atas! Silakan klik ikon kotak di kanan teks untuk menyalin ke HP.")
