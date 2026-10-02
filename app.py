@@ -2,6 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
+from shapely.geometry import shape
 
 st.set_page_config(layout="wide")
 st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
@@ -13,7 +14,7 @@ with open("kab_lamongan_popmap.geojson", "r") as f:
 # 2. Buat objek peta dengan OpenStreetMap (OSM) asli + Kontrol Skala
 m = folium.Map(
     location=[-7.12, 112.41], 
-    zoom_start=11, # Menambah zoom awal ke 11 agar teks label desa langsung terlihat jelas
+    zoom_start=11, 
     tiles="OpenStreetMap",
     control_scale=True
 )
@@ -39,7 +40,7 @@ def ganti_warna(fitur):
         'fillColor': warna, 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.8       
+        'fillOpacity': 0.85       # Menaikkan kejelasan warna poligon agar lebih mantap
     }
 
 # 4. Memasukkan data GeoJSON ke peta
@@ -50,48 +51,61 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# 5. MENAMPILKAN NAMA DESA PERMANEN DI ATAS PETA
-# Menggunakan Tooltip dengan parameter permanent=True dan style CSS custom yang bersih
-folium.features.GeoJsonTooltip(
-    fields=["KEL_DES"],
-    aliases=[""], # Kosongkan alias agar hanya nama desanya saja yang muncul tanpa label teks tambahan
-    permanent=True,
-    direction="center",
-    style="""
-        background-color: transparent; 
-        border: none; 
-        box-shadow: none; 
-        font-size: 9px; 
-        font-weight: bold; 
-        color: #333333;
-        text-shadow: 1px 1px 2px white; /* Memberikan bayangan putih agar tulisan mudah dibaca di atas warna biru */
-    """
-).add_to(choro_layer)
+# 5. SOLUSI ANTI-KABUT: Menampilkan nama desa menggunakan DivIcon teks murni
+# Teks akan ditempatkan pas di titik tengah (centroid) masing-masing wilayah desa
+for fitur in geo_data['features']:
+    nama_desa = fitur['properties'].get('KEL_DES', '')
+    geom = fitur.get('geometry')
+    
+    if geom and nama_desa:
+        # Hitung titik tengah poligon desa secara otomatis
+        s = shape(geom)
+        centroid = s.centroid
+        lat, lon = centroid.y, centroid.x
+        
+        # Cetak teks langsung ke peta tanpa kontainer HTML transparan
+        folium.Marker(
+            location=[lat, lon],
+            icon=folium.DivIcon(
+                html=f'''
+                <div style="
+                    font-size: 8px; 
+                    font-weight: bold; 
+                    color: #000000; 
+                    text-align: center;
+                    white-space: nowrap;
+                    transform: translate(-50%, -50%);
+                    text-shadow: 1.5px 1.5px 2px #ffffff, -1.5px -1.5px 2px #ffffff;
+                ">{nama_desa}</div>
+                '''
+            )
+        ).add_to(m)
 
-# 6. MENAMBAHKAN KOTAK LEGENDA MANUAl
+# 6. MENAMBAHKAN KOTAK LEGENDA SOLID (TIDAK TRANSPARAN)
 legenda_html = '''
 <div style="
     position: fixed; 
     bottom: 50px; left: 50px; width: 220px; height: 180px; 
-    border:2px solid grey; z-index:9999; font-size:12px;
-    background-color:white;
+    border:2px solid #666666; z-index:9999; font-size:12px;
+    background-color: #ffffff;
+    color: #000000;
     padding: 10px;
-    opacity: 0.85;
     font-family: sans-serif;
     border-radius: 5px;
+    box-shadow: 3px 3px 5px rgba(0,0,0,0.3);
     ">
-    <b>Legenda Penduduk (Jiwa)</b><br>
-    <i style="background:#081d58; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> > 6.000<br>
-    <i style="background:#253494; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 4.501 - 6.000<br>
-    <i style="background:#1d91c0; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 3.001 - 4.500<br>
-    <i style="background:#41b6c4; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 2.001 - 3.000<br>
-    <i style="background:#7fcdbb; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 1.001 - 2.000<br>
-    <i style="background:#ffffcc; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> &le; 1.000<br>
+    <b>Legenda Penduduk (Jiwa)</b><br><br>
+    <i style="background:#081d58; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>&gt; 6.000</span><br>
+    <i style="background:#253494; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>4.501 - 6.000</span><br>
+    <i style="background:#1d91c0; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>3.001 - 4.500</span><br>
+    <i style="background:#41b6c4; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>2.001 - 3.000</span><br>
+    <i style="background:#7fcdbb; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>1.001 - 2.000</span><br>
+    <i style="background:#ffffcc; width:18px; height:18px; float:left; margin-right:8px; opacity:0.9; border:1px solid #fff;"></i> <span>&le; 1.000</span><br>
 </div>
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# 7. Menambahkan Fitur Pop-up (Tetap dipertahankan saat wilayah diklik)
+# 7. Menambahkan Fitur Pop-up saat wilayah diklik
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk"],
     aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
