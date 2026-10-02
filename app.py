@@ -13,33 +13,45 @@ with open("kab_lamongan_popmap.geojson", "r") as f:
 # 2. Buat objek peta dengan OpenStreetMap (OSM) asli
 m = folium.Map(location=[-7.12, 112.41], zoom_start=10, tiles="OpenStreetMap")
 
-# 3. Fungsi menentukan gradasi warna BIRU yang kontras dan terang
+# 3. Fungsi mewarnai peta (Membaca kolom warna_hex dari QGIS atau kalkulasi otomatis tingkat desa)
 def ganti_warna(fitur):
-    jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    
-    if jumlah_pop > 50000:
-        return {'fillColor': '#081d58', 'color': '#41b6c4', 'weight': 1.5, 'fillOpacity': 0.85} 
-    elif jumlah_pop > 40000:
-        return {'fillColor': '#253494', 'color': '#41b6c4', 'weight': 1.5, 'fillOpacity': 0.80} 
-    elif jumlah_pop > 30000:
-        return {'fillColor': '#1d91c0', 'color': '#7fcdbb', 'weight': 1.2, 'fillOpacity': 0.75} 
-    elif jumlah_pop > 20000:
-        return {'fillColor': '#41b6c4', 'color': '#a1dab4', 'weight': 1.2, 'fillOpacity': 0.70} 
-    elif jumlah_pop > 10000:
-        return {'fillColor': '#7fcdbb', 'color': '#ffffcc', 'weight': 1.0, 'fillOpacity': 0.65} 
-    else:
-        return {'fillColor': '#ffffcc', 'color': '#cccccc', 'weight': 1.0, 'fillOpacity': 0.60} 
+    # Opsi A: Cek apakah ada kolom warna_hex hasil buatan QGIS Anda
+    warna = fitur['properties'].get('warna_hex', None)
+    if warna is None:
+        warna = fitur['properties'].get('WARNA_HEX', None)
+        
+    # Opsi B: Jika kolom QGIS kosong/belum terunggah, hitung otomatis berdasarkan angka penduduk desa agar peta TIDAK transparan
+    if warna is None or warna == '':
+        jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
+        if jumlah_pop > 6000:
+            warna = '#081d58'  # Biru Navy Tua
+        elif jumlah_pop > 4500:
+            warna = '#253494'  # Biru Royal
+        elif jumlah_pop > 3000:
+            warna = '#1d91c0'  # Biru Cerah
+        elif jumlah_pop > 2000:
+            warna = '#41b6c4'  # Biru Toska
+        elif jumlah_pop > 1000:
+            warna = '#7fcdbb'  # Biru Pudar
+        else:
+            warna = '#ffffcc'  # Kuning Terang
+            
+    return {
+        'fillColor': warna, 
+        'color': '#666666',      # Warna garis batas desa (Abu-abu tipis agar rapi)
+        'weight': 0.5,           # Ketebalan garis pembatas desa
+        'fillOpacity': 0.8       # Kejelasan warna agar kontras dan tidak berkabut
+    }
 
 # 4. Memasukkan data GeoJSON ke peta
 choro_layer = folium.GeoJson(
     geo_data,
     name="Kloroplet Penduduk",
     style_function=ganti_warna,
-    highlight_function=lambda x: {'weight': 3, 'color': '#ff7800', 'fillOpacity': 0.9} 
+    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9} # Efek oranye saat kursor lewat
 ).add_to(m)
 
 # 5. MENAMPILKAN SEMUA KETERANGAN ATRIBUT DI POP-UP
-# Mendaftarkan seluruh nama atribut asli yang ada di dalam berkas GeoJSON Anda
 folium.features.GeoJsonPopup(
     fields=[
         "KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", 
