@@ -28,6 +28,7 @@ with st.sidebar:
     st.caption("2. Gunakan filter 'Desa' untuk memilih atau mencentang beberapa desa tertentu saja.")
     st.caption("3. Gunakan kolom pencarian di kanan atas peta jika ingin melacak lokasi desa secara instan.")
     st.caption("4. Arahkan kursor (*hover*) atau klik pada wilayah desa di peta untuk melihat detail data demografi.")
+    st.caption("5. Lihat tabel di bawah peta untuk meninjau data tabular hasil penyaringan.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -239,3 +240,24 @@ folium.features.GeoJsonPopup(
 folium.LayerControl(position='topleft').add_to(m)
 
 st_folium(m, height=550, use_container_width=True)
+
+# ==========================================
+# 7. MENAMPILKAN TABEL DATA HASIL SELEKSI
+# ==========================================
+st.markdown("---")
+st.markdown(f"### 📋 Tabel Data Penduduk ({label_status})")
+
+# Menyiapkan dataframe yang rapi dengan mengurutkannya berdasarkan Kecamatan & Desa
+df_tabel = df_filter.sort_values(by=['Kecamatan', 'Desa']).reset_index(drop=True)
+
+# Format tampilan angka ribuan agar mudah dibaca di tabel menggunakan format container/column Streamlit
+st.dataframe(
+    df_tabel, 
+    use_container_width=True, 
+    hide_index=True,
+    column_config={
+        "Jumlah Penduduk": st.column_config.NumberColumn(format="%d Jiwa"),
+        "Laki-laki": st.column_config.NumberColumn(format="%d Jiwa"),
+        "Perempuan": st.column_config.NumberColumn(format="%d Jiwa"),
+    }
+)
