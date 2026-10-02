@@ -2,7 +2,6 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
-from shapely.geometry import shape
 
 st.set_page_config(layout="wide")
 st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
@@ -40,7 +39,7 @@ def ganti_warna(fitur):
         'fillColor': warna, 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.85       # Menaikkan kejelasan warna poligon agar lebih mantap
+        'fillOpacity': 0.85       
     }
 
 # 4. Memasukkan data GeoJSON ke peta
@@ -51,35 +50,14 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# 5. SOLUSI ANTI-KABUT: Menampilkan nama desa menggunakan DivIcon teks murni
-# Teks akan ditempatkan pas di titik tengah (centroid) masing-masing wilayah desa
-for fitur in geo_data['features']:
-    nama_desa = fitur['properties'].get('KEL_DES', '')
-    geom = fitur.get('geometry')
-    
-    if geom and nama_desa:
-        # Hitung titik tengah poligon desa secara otomatis
-        s = shape(geom)
-        centroid = s.centroid
-        lat, lon = centroid.y, centroid.x
-        
-        # Cetak teks langsung ke peta tanpa kontainer HTML transparan
-        folium.Marker(
-            location=[lat, lon],
-            icon=folium.DivIcon(
-                html=f'''
-                <div style="
-                    font-size: 8px; 
-                    font-weight: bold; 
-                    color: #000000; 
-                    text-align: center;
-                    white-space: nowrap;
-                    transform: translate(-50%, -50%);
-                    text-shadow: 1.5px 1.5px 2px #ffffff, -1.5px -1.5px 2px #ffffff;
-                ">{nama_desa}</div>
-                '''
-            )
-        ).add_to(m)
+# 5. FITUR HOVER TOOLTIP: Nama desa HANYA muncul saat disorot (100% Anti-Kabut & Bersih)
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=["Desa/Kelurahan: "],
+    labels=True,
+    sticky=True, # Tulisan menempel mengikuti pergerakan kursor Anda
+    style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
+).add_to(choro_layer)
 
 # 6. MENAMBAHKAN KOTAK LEGENDA SOLID (TIDAK TRANSPARAN)
 legenda_html = '''
@@ -105,7 +83,7 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# 7. Menambahkan Fitur Pop-up saat wilayah diklik
+# 7. Menambahkan Fitur Pop-up saat wilayah diklik (Menampilkan data lengkap)
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk"],
     aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
