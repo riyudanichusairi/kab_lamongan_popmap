@@ -10,12 +10,12 @@ st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 with open("kab_lamongan_popmap.geojson", "r") as f:
     geo_data = json.load(f)
 
-# 2. Buat objek peta dengan OpenStreetMap (OSM) asli + AKTIFKAN KONTROL SKALA PETA
+# 2. Buat objek peta dengan OpenStreetMap (OSM) asli + Kontrol Skala
 m = folium.Map(
     location=[-7.12, 112.41], 
-    zoom_start=10, 
+    zoom_start=11, # Menambah zoom awal ke 11 agar teks label desa langsung terlihat jelas
     tiles="OpenStreetMap",
-    control_scale=True  # <-- Baris ini otomatis memunculkan skala meter/kilometer di pojok kiri bawah peta
+    control_scale=True
 )
 
 # 3. Fungsi mewarnai peta otomatis berdasarkan angka penduduk desa
@@ -50,7 +50,25 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# 5. MENAMBAHKAN KOTAK LEGENDA MANUAl (Agar terbaca di HP & Laptop)
+# 5. MENAMPILKAN NAMA DESA PERMANEN DI ATAS PETA
+# Menggunakan Tooltip dengan parameter permanent=True dan style CSS custom yang bersih
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=[""], # Kosongkan alias agar hanya nama desanya saja yang muncul tanpa label teks tambahan
+    permanent=True,
+    direction="center",
+    style="""
+        background-color: transparent; 
+        border: none; 
+        box-shadow: none; 
+        font-size: 9px; 
+        font-weight: bold; 
+        color: #333333;
+        text-shadow: 1px 1px 2px white; /* Memberikan bayangan putih agar tulisan mudah dibaca di atas warna biru */
+    """
+).add_to(choro_layer)
+
+# 6. MENAMBAHKAN KOTAK LEGENDA MANUAl
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -73,12 +91,12 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# 6. Menambahkan Fitur Pop-up
+# 7. Menambahkan Fitur Pop-up (Tetap dipertahankan saat wilayah diklik)
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk"],
     aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
     localize=True
 ).add_to(choro_layer)
 
-# 7. Tampilkan peta ke web Streamlit (Menggunakan use_container_width agar responsif di HP)
+# 8. Tampilkan peta ke web Streamlit
 st_folium(m, height=650, use_container_width=True)
