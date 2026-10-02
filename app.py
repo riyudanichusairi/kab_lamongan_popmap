@@ -23,11 +23,12 @@ with st.sidebar:
         "kependudukan tingkat Desa/Kelurahan di wilayah Kabupaten Lamongan, Provinsi Jawa Timur."
     )
     st.markdown("---")
-    st.write("📌 **Panduan Penggunaan Tool Seleksi Peta:**")
-    st.caption("1. Gunakan ikon 🔳 **Kotak (Draw a rectangle)** pada menu toolbar di kiri peta.")
-    st.caption("2. Klik dan seret mouse pada peta untuk membuat area kotak seleksi.")
-    st.caption("3. Angka metrik di atas peta akan otomatis menjumlahkan desa yang masuk ke dalam area kotak tersebut.")
-    st.caption("4. Untuk menghapus area kotak, klik ikon 🗑️ pada toolbar peta.")
+    st.write("📌 **Panduan Tool Seleksi Poligon (MapInfo Style):**")
+    st.caption("1. Gunakan ikon ⬠ **Poligon (Draw a polygon)** pada menu toolbar di kiri peta.")
+    st.caption("2. Klik mouse di beberapa titik peta secara berurutan untuk membentuk area seleksi bebas.")
+    st.caption("3. Klik kembali pada titik pertama untuk menutup bentuk poligon.")
+    st.caption("4. Angka metrik di atas peta akan otomatis menghitung desa yang masuk ke dalam poligon tersebut.")
+    st.caption("5. Untuk menghapus area poligon, klik ikon 🗑️ pada toolbar peta.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -52,7 +53,7 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Inisialisasi Session State untuk menyimpan nama-nama desa yang terjaring dalam kotak gambar mouse
+# Inisialisasi Session State untuk menyimpan desa yang masuk dalam poligon mouse
 if "desa_terseksi_spatial" not in st.session_state:
     st.session_state.desa_terseksi_spatial = []
 
@@ -64,7 +65,7 @@ st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 # Menentukan apakah filter spasial aktif
 if st.session_state.desa_terseksi_spatial:
     df_filter = df[df['Desa'].isin(st.session_state.desa_terseksi_spatial)]
-    label_status = "Hasil Seleksi Mouse"
+    label_status = "Hasil Seleksi Poligon"
     total_desa = len(st.session_state.desa_terseksi_spatial)
 else:
     df_filter = df
@@ -92,7 +93,7 @@ with col4:
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # ==========================================
-# 5. MEMBANGUN PETA FOLIUM DENGAN TOOL DRAW (SELEKSI MOUSE)
+# 5. MEMBANGUN PETA FOLIUM DENGAN TOOL POLYGON DRAW
 # ==========================================
 m = folium.Map(
     location=[-7.12, 112.41], 
@@ -107,17 +108,17 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Tambahkan Tool Gambar Kotak Seleksi (Draw Plugin) di sisi kiri peta
+# Mengaktifkan Toolbar Seleksi Poligon Bebas (Draw Plugin)
 plugin_gambar = Draw(
     export=False,
     position="topleft",
     draw_options={
         'polyline': False,
-        'polygon': False,
+        'polygon': True,      # PERBAIKAN: Aktifkan seleksi poligon bebas ala MapInfo
         'circle': False,
         'marker': False,
         'circlemarker': False,
-        'rectangle': True  # Hanya aktifkan gambar persegi/kotak seleksi
+        'rectangle': True     # Tetap aktifkan opsi kotak sebagai alternatif cepat
     },
     edit_options={
         'poly': {'allowIntersection': False}
@@ -129,7 +130,7 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     nama_desa_fitur = fitur['properties'].get('KEL_DES')
     
-    # Beri warna khusus jika desa masuk ke dalam area seleksi mouse
+    # Beri warna khusus jika desa masuk ke dalam area seleksi poligon mouse
     if st.session_state.desa_terseksi_spatial and nama_desa_fitur in st.session_state.desa_terseksi_spatial:
         return {
             'fillColor': '#ff7800', 
@@ -230,30 +231,31 @@ folium.LayerControl(position='topleft').add_to(m)
 # Tampilkan peta dan tangkap data geometri dari mouse
 st_peta_data = st_folium(m, height=550, use_container_width=True, key="peta_lamongan_draw")
 
-# PERBAIKAN LOGIKA SPASIAL: Menggunakan matematika Bounding Box murni (Bebas dari Modul Shapely)
+# Fungsi Matematika Ray-Casting untuk memeriksa apakah sebuah titik berada di dalam poligon
+def titik_dalam_poligon(x, y, poli):
+    n = len(poli)
+    di_dalam = False
+    p1x, p1y = poli[0]
+    for i in range(n + 1):
+        p2x, p2y = poli[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xints:
+                        di_dalam = not di_dalam
+        p1x, p1y = p2x, p2y
+    return di_dalam
+
+# LOGIKA SPASIAL: Mendeteksi gambar poligon/kotak dari mouse pengguna
 if st_peta_data and "last_active_drawing" in st_peta_data:
     info_gambar = st_peta_data["last_active_drawing"]
     
     if info_gambar and info_gambar.get("geometry"):
-        koordinat_kotak = info_gambar["geometry"]["coordinates"][0]
-        # Cari batas ekstrim kotak koordinat mouse (min/max X dan Y)
-        lngs = [k[0] for k in koordinat_kotak]
-        lats = [k[1] for k in koordinat_kotak]
-        min_lng, max_lng = min(lngs), max(lngs)
-        min_lat, max_lat = min(lats), max(lats)
+        tipe_draw = info_gambar["geometry"]["type"]
         
-        desa_terjaring = []
-        for fitur in geo_data['features']:
-            # Lakukan ekstraksi koordinat titik-titik penyusun wilayah desa
-            tipe_geom = fitur['geometry']['type']
-            koor_desa = fitur['geometry']['coordinates']
-            
-            terjaring = False
-            # Menguji titik koordinat desa apakah berada di dalam cakupan kotak mouse
-            if tipe_geom == "Polygon":
-                for ring in koor_desa:
-                    for pt in ring:
-                        if min_lng <= pt[0] <= max_lng and min_lat <= pt[1] <= max_lat:
-                            terjaring = True
-                            break
-                    if terjaring: break
+        # Ekstrak titik-titik koordinat pembatas dari poligon bentukan mouse
+        if tipe_draw in ["Polygon", "MultiPolygon"]:
+            simpul_peta = info_gambar["geometry"]["coordinates"][0]
+            # Menghilangkan dimensi koordinat z jika ada
