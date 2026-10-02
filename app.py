@@ -12,7 +12,8 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    st.image("https://wikimedia.org", width=100) # Logo Lamongan resmi (Wikimedia)
+    # Menggunakan tautan logo alternatif CDN publik yang ringan dan kebal blokir
+    st.image("https://icons8.com", width=70) 
     st.title("WebGIS Lamongan")
     st.write(
         "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
@@ -36,7 +37,7 @@ st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 with open("kab_lamongan_popmap.geojson", "r") as f:
     geo_data = json.load(f)
 
-# Ekstrak data GeoJSON ke dalam Pandas DataFrame untuk keperluan Grafik & Statistik
+# Ekstrak data GeoJSON ke dalam Pandas DataFrame
 records = []
 for fitur in geo_data['features']:
     props = fitur['properties']
@@ -48,12 +49,12 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Hitung data statistik global untuk Metric Cards
+# Hitung data statistik global
 total_penduduk_global = int(df['Jumlah Penduduk'].sum())
 desa_terpadat = df.loc[df['Jumlah Penduduk'].idxmax()]
 desa_terjarang = df.loc[df['Jumlah Penduduk'].idxmin()]
 
-# Tampilkan data statistik di bagian atas dashboard
+# Tampilkan data statistik
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric("Total Penduduk Terdata", f"{total_penduduk_global:,} Jiwa")
@@ -67,7 +68,6 @@ st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 # ==========================================
 # 3. MEMBANGUN PETA FOLIUM
 # ==========================================
-# Koordinat tengah Lamongan, tinggi peta diturunkan menjadi 550 agar pas satu layar
 m = folium.Map(
     location=[-7.12, 112.41], 
     zoom_start=11, 
@@ -75,9 +75,9 @@ m = folium.Map(
     control_scale=True
 )
 
-# Mendaftarkan Multi-Basemap gratis & aman
+# Mendaftarkan Multi-Basemap alternatif kebal abu-abu
 folium.TileLayer(
-    tiles='https://openstreetmap.org{z}/{x}/{y}.png',
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; OpenStreetMap contributors',
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
@@ -92,12 +92,6 @@ folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Google Hybrid',
     name='Satelit + Jalan (Google Hybrid)'
-).add_to(m)
-
-folium.TileLayer(
-    tiles='https://stadiamaps.com{z}/{x}/{y}.png',
-    attr='&copy; Stadia Maps, &copy; OpenStreetMap',
-    name='Mode Gelap (Stadia Dark)'
 ).add_to(m)
 
 # Fungsi pewarnaan otomatis kloroplet desa
@@ -146,7 +140,7 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# Hover Tooltip (Anti-Kabut)
+# Hover Tooltip
 folium.features.GeoJsonTooltip(
     fields=["KEL_DES", "KEC"],
     aliases=["Desa/Kelurahan: ", "Kecamatan: "],
@@ -206,12 +200,8 @@ st_folium(m, height=550, use_container_width=True)
 # ==========================================
 st.markdown("---")
 st.markdown("### 📊 Grafik Perbandingan Jumlah Penduduk per Kecamatan")
-
-# Melakukan grouping data penduduk berdasarkan total kecamatan
 df_kecamatan = df.groupby('Kecamatan')['Jumlah Penduduk'].sum().reset_index()
 df_kecamatan = df_kecamatan.sort_values(by='Jumlah Penduduk', ascending=False)
-
-# Menampilkan grafik batang menggunakan komponen bawaan Streamlit
 st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_container_width=True)
 
 # ==========================================
