@@ -12,8 +12,8 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # Trik 3 kolom virtual untuk menyeimbangkan posisi logo tepat di tengah sidebar
-    col_left, col_center, col_right = st.columns()
+    # PERBAIKAN: Memasukkan angka 3 ke dalam st.columns agar kebal dari TypeError
+    col_left, col_center, col_right = st.columns(3)
     with col_center:
         st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
         st.image("logo_lamongan.png", use_container_width=True) 
@@ -221,12 +221,10 @@ with st.sidebar:
         use_container_width=True
     )
     
-    # BARU: MENAMBAHKAN FITUR UTK MENYALIN URL WEBGIS SECARA INSTAN
     st.markdown("---")
     st.write("🔗 **Bagikan WebGIS Ini:**")
     url_webgis = "https://streamlit.app"
     
-    # Membuat tombol klik salin otomatis bawaan Streamlit
     if st.button("📋 Klik untuk Salin Tautan", use_container_width=True):
         st.code(url_webgis, language="text")
         st.success("Tautan muncul di atas! Silakan klik ikon kotak di kanan teks untuk menyalin ke HP.")
