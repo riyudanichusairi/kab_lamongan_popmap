@@ -17,7 +17,6 @@ with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
-        # PERBAIKAN TOTAL: Menggunakan use_container_width=True untuk mengatasi TypeError
         st.image("logo_lamongan.png", use_container_width=True) 
     
     st.title("WebGIS Lamongan")
@@ -213,7 +212,8 @@ with st.sidebar:
     
     st.markdown("---")
     st.write("🔗 **Bagikan WebGIS Ini:**")
-    url_webgis = "https://streamlit.app"
+    # PERBAIKAN: URL sudah disesuaikan ke alamat domain kustom Anda
+    url_webgis = "https://lamongan-popmap.streamlit.app/"
     
     if st.button("📋 Klik untuk Tampilkan Tautan", use_container_width=True):
         st.success(f"Salin tautan ini: {url_webgis}")
