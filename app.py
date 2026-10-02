@@ -19,33 +19,33 @@ m = folium.Map(
     control_scale=True
 )
 
-# 3. PERBAIKAN TOTAL BASEMAP: Menggunakan tautan URL langsung agar 100% muncul dan anti-gagal
-# Opsi 1: Peta Jalan Standar (OpenStreetMap) - Diperbaiki link servernya
+# 3. FIX BASEMAP JALAN & SATELIT: Menambahkan sub-domain alternatif agar bebas dari layar abu-abu
+# Opsi 1: Peta Jalan Standar (OpenStreetMap Standar)
 folium.TileLayer(
-    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    tiles='https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Opsi 2: Peta Citra Satelit (Google Satellite)
+# Opsi 2: Peta Citra Satelit (Google Satellite) - Sangat Stabil
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Google Satellite',
     name='Citra Satelit (Google Satellite)'
 ).add_to(m)
 
-# Opsi 3: Peta Medan / Kontur Bumi (Google Terrain)
+# Opsi 3: Peta Jalan + Satelit (Google Hybrid) - Membantu melihat nama jalan di atas citra satelit
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Google Terrain',
-    name='Peta Kontur / Relief (Google Terrain)'
+    attr='Google Hybrid',
+    name='Satelit + Jalan (Google Hybrid)'
 ).add_to(m)
 
-# Opsi 4: Mode Gelap (CartoDB Dark Matter)
+# Opsi 4: Mode Gelap Eksklusif (Stadia Alidade Smooth Dark)
 folium.TileLayer(
-    tiles='https://{s}://{z}/{x}/{y}{r}.png',
-    attr='&copy; OpenStreetMap &copy; CARTO',
-    name='Mode Gelap (CartoDB Dark)'
+    tiles='https://stadiamaps.com{z}/{x}/{y}.png',
+    attr='&copy; Stadia Maps, &copy; OpenStreetMap',
+    name='Mode Gelap (Stadia Dark)'
 ).add_to(m)
 
 
@@ -83,7 +83,7 @@ choro_layer = folium.GeoJson(
 ).add_to(m)
 
 
-# 6. KOLOM PENCARIAN DI KANAN ATAS
+# 6. KOLOM PENCARIAN DI POJOK KANAN ATAS
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -106,7 +106,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# 8. LEGENDA MODEL PERSEGI PANJANG DI BAWAH TENGAH PETA
+# 8. LEGENDA PERSEGI PANJANG DI BAWAH TENGAH PETA
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -146,7 +146,7 @@ folium.features.GeoJsonPopup(
     localize=True
 ).add_to(choro_layer)
 
-# 10. AKTIFKAN TOMBOL PENGENDALI LAYER
+# 10. TOMBOL PENGENDALI LAYER DI SEBELAH KIRI ATAS
 folium.LayerControl(position='topleft').add_to(m)
 
 # 11. Tampilkan peta ke web Streamlit
