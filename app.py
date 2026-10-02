@@ -3,15 +3,71 @@ import folium
 from streamlit_folium import st_folium
 import json
 from folium.plugins import Search
+import pandas as pd
 
-st.set_page_config(layout="wide")
-st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
+# Konfigurasi halaman penuh (wide mode)
+st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
-# 1. Buka file GeoJSON
+# ==========================================
+# 1. MEMBUAT PANEL SAMPING (SIDEBAR)
+# ==========================================
+with st.sidebar:
+    st.image("https://wikimedia.org", width=100) # Logo Lamongan resmi (Wikimedia)
+    st.title("WebGIS Lamongan")
+    st.write(
+        "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
+        "kependudukan tingkat Desa/Kelurahan di wilayah Kabupaten Lamongan, Provinsi Jawa Timur."
+    )
+    st.markdown("---")
+    st.write("📌 **Panduan Penggunaan:**")
+    st.caption("1. Gunakan kolom pencarian di kanan atas peta untuk mencari desa tertentu.")
+    st.caption("2. Arahkan kursor (*hover*) atau klik pada wilayah desa untuk melihat detail data.")
+    st.caption("3. Gunakan ikon kertas bertumpuk di kiri atas untuk mengganti peta latar belakang (basemap).")
+    
+    st.markdown("---")
+    st.write("📊 **Aksi Data:**")
+
+# ==========================================
+# 2. MEMBUAT KONTEN UTAMA & DATA MANAGEMENT
+# ==========================================
+st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
+
+# Buka file GeoJSON
 with open("kab_lamongan_popmap.geojson", "r") as f:
     geo_data = json.load(f)
 
-# 2. Buat objek peta dasar
+# Ekstrak data GeoJSON ke dalam Pandas DataFrame untuk keperluan Grafik & Statistik
+records = []
+for fitur in geo_data['features']:
+    props = fitur['properties']
+    records.append({
+        'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
+        'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
+        'Jumlah Penduduk': props.get('jumlah_penduduk', 0),
+        'Laki-laki': props.get('laki_laki', 0)
+    })
+df = pd.DataFrame(records)
+
+# Hitung data statistik global untuk Metric Cards
+total_penduduk_global = int(df['Jumlah Penduduk'].sum())
+desa_terpadat = df.loc[df['Jumlah Penduduk'].idxmax()]
+desa_terjarang = df.loc[df['Jumlah Penduduk'].idxmin()]
+
+# Tampilkan data statistik di bagian atas dashboard
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Penduduk Terdata", f"{total_penduduk_global:,} Jiwa")
+with col2:
+    st.metric("Desa Terpadat", f"{desa_terpadat['Desa']}", f"{int(desa_terpadat['Jumlah Penduduk']):,} Jiwa")
+with col3:
+    st.metric("Desa Terjarang", f"{desa_terjarang['Desa']}", f"{int(desa_terjarang['Jumlah Penduduk']):,} Jiwa")
+
+st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
+
+# ==========================================
+# 3. MEMBANGUN PETA FOLIUM
+# ==========================================
+# Koordinat tengah Lamongan, tinggi peta diturunkan menjadi 550 agar pas satu layar
 m = folium.Map(
     location=[-7.12, 112.41], 
     zoom_start=11, 
@@ -19,40 +75,34 @@ m = folium.Map(
     control_scale=True
 )
 
-# 3. FIX BASEMAP JALAN & SATELIT: Menambahkan sub-domain alternatif agar bebas dari layar abu-abu
-# Opsi 1: Peta Jalan Standar (OpenStreetMap Standar)
+# Mendaftarkan Multi-Basemap gratis & aman
 folium.TileLayer(
-    tiles='https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attr='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    tiles='https://openstreetmap.org{z}/{x}/{y}.png',
+    attr='&copy; OpenStreetMap contributors',
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Opsi 2: Peta Citra Satelit (Google Satellite) - Sangat Stabil
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Google Satellite',
     name='Citra Satelit (Google Satellite)'
 ).add_to(m)
 
-# Opsi 3: Peta Jalan + Satelit (Google Hybrid) - Membantu melihat nama jalan di atas citra satelit
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Google Hybrid',
     name='Satelit + Jalan (Google Hybrid)'
 ).add_to(m)
 
-# Opsi 4: Mode Gelap Eksklusif (Stadia Alidade Smooth Dark)
 folium.TileLayer(
     tiles='https://stadiamaps.com{z}/{x}/{y}.png',
     attr='&copy; Stadia Maps, &copy; OpenStreetMap',
     name='Mode Gelap (Stadia Dark)'
 ).add_to(m)
 
-
-# 4. Fungsi mewarnai peta otomatis berdasarkan angka penduduk desa
+# Fungsi pewarnaan otomatis kloroplet desa
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    
     if jumlah_pop > 6000:
         warna = '#081d58'
     elif jumlah_pop > 4500:
@@ -73,7 +123,7 @@ def ganti_warna(fitur):
         'fillOpacity': 0.75       
     }
 
-# 5. Memasukkan data GeoJSON ke peta
+# Masukkan layer GeoJSON ke peta
 choro_layer = folium.GeoJson(
     geo_data,
     name="Kloroplet Penduduk Lamongan",
@@ -82,8 +132,7 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-
-# 6. KOLOM PENCARIAN DI POJOK KANAN ATAS
+# Tambahkan kolom pencarian di pojok kanan atas
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -97,7 +146,7 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# 7. FITUR HOVER TOOLTIP
+# Hover Tooltip (Anti-Kabut)
 folium.features.GeoJsonTooltip(
     fields=["KEL_DES", "KEC"],
     aliases=["Desa/Kelurahan: ", "Kecamatan: "],
@@ -106,7 +155,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# 8. LEGENDA PERSEGI PANJANG DI BAWAH TENGAH PETA
+# Legenda Persegi Panjang di bawah tengah peta
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -139,15 +188,41 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# 9. Menambahkan Fitur Pop-up saat wilayah diklik
+# Pop-up data lengkap saat diklik
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk"],
     aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
     localize=True
 ).add_to(choro_layer)
 
-# 10. TOMBOL PENGENDALI LAYER DI SEBELAH KIRI ATAS
+# Tombol kontrol basemap di kiri atas
 folium.LayerControl(position='topleft').add_to(m)
 
-# 11. Tampilkan peta ke web Streamlit
-st_folium(m, height=650, use_container_width=True)
+# Tampilkan peta ke aplikasi web Streamlit
+st_folium(m, height=550, use_container_width=True)
+
+# ==========================================
+# 4. MEMBUAT GRAFIK ANALISIS DI BAWAH PETA
+# ==========================================
+st.markdown("---")
+st.markdown("### 📊 Grafik Perbandingan Jumlah Penduduk per Kecamatan")
+
+# Melakukan grouping data penduduk berdasarkan total kecamatan
+df_kecamatan = df.groupby('Kecamatan')['Jumlah Penduduk'].sum().reset_index()
+df_kecamatan = df_kecamatan.sort_values(by='Jumlah Penduduk', ascending=False)
+
+# Menampilkan grafik batang menggunakan komponen bawaan Streamlit
+st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_container_width=True)
+
+# ==========================================
+# 5. BUTTON UNDUH DATA PADA SIDEBAR
+# ==========================================
+with st.sidebar:
+    csv_data = df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Unduh Data Tabel (.CSV)",
+        data=csv_data,
+        file_name="data_penduduk_lamongan.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
