@@ -15,7 +15,6 @@ with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") 
-        # Diperbaiki kembali menggunakan use_container_width agar tidak memicu TypeError
         st.image("logo_lamongan.png", use_container_width=True) 
     
     st.title("WebGIS Lamongan")
@@ -240,22 +239,3 @@ folium.features.GeoJsonPopup(
 folium.LayerControl(position='topleft').add_to(m)
 
 st_folium(m, height=550, use_container_width=True)
-
-# ==========================================
-# 7. GRAFIK PERBANDINGAN BERDASARKAN FILTER
-# ==========================================
-st.markdown("---")
-st.markdown("### 📊 Grafik Analisis Data Kependudukan")
-
-if desa_terpilih:
-    st.write(f"Menampilkan perbandingan demografi gender untuk desa terpilih:")
-    df_chart = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
-    st.bar_chart(df_chart)
-elif kecamatan_terpilih != "-- Semua Kecamatan --":
-    st.write(f"Menampilkan perbandingan total penduduk di seluruh desa wilayah **Kecamatan {kecamatan_terpilih}**:")
-    df_chart_kec = df_filter.set_index('Desa')[['Jumlah Penduduk']].sort_values(by='Jumlah Penduduk', ascending=False)
-    st.bar_chart(df_chart_kec)
-else:
-    st.info("💡 **Tips:** Gunakan filter Kecamatan and Desa di atas untuk memunculkan grafik visualisasi data yang spesifik.")
-    st.caption("Menampilkan 10 Desa/Kelurahan dengan Jumlah Penduduk Tertinggi di Kabupaten Lamongan:")
-    df_top10 = df.nlargest(10, 'Jumlah Penduduk').set_index('Desa')[['Jumlah Penduduk']]
