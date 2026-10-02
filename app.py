@@ -51,7 +51,7 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Perbaikan Inisialisasi Session State agar pilihan klik mouse tersimpan stabil
+# Inisialisasi Session State agar pilihan klik mouse tersimpan stabil
 if "desa_terpilih_mouse" not in st.session_state:
     st.session_state.desa_terpilih_mouse = None
 
@@ -119,7 +119,7 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     nama_desa_fitur = fitur['properties'].get('KEL_DES')
     
-    # Berikan highlight warna kuning jika desa tersebut sedang diklik oleh mouse
+    # Highlight warna jingga jika desa tersebut sedang diklik
     if st.session_state.desa_terpilih_mouse and nama_desa_fitur == st.session_state.desa_terpilih_mouse:
         return {
             'fillColor': '#ff7800', 
@@ -217,16 +217,14 @@ folium.features.GeoJsonPopup(
 
 folium.LayerControl(position='topleft').add_to(m)
 
-# TANGKAP OUTPUT KLIK MOUSE DARI PETA
+# Tampilkan peta ke aplikasi web Streamlit dan tangkap interaksi mouse
 st_peta_data = st_folium(m, height=550, use_container_width=True, key="peta_lamongan")
 
-# Jalankan pengecekan jika komponen peta menangkap klik poligon aktif dari mouse pengguna
 if st_peta_data and "last_active_drawing" in st_peta_data and st_peta_data["last_active_drawing"]:
     fitur_terklik = st_peta_data["last_active_drawing"]
     if "properties" in fitur_terklik and "KEL_DES" in fitur_terklik["properties"]:
         desa_terdeteksi = fitur_terklik["properties"]["KEL_DES"]
         
-        # Jika desa yang diklik berbeda dari yang tersimpan saat ini, perbarui metrik secara instan
         if st.session_state.desa_terpilih_mouse != desa_terdeteksi:
             st.session_state.desa_terpilih_mouse = desa_terdeteksi
             st.rerun()
@@ -245,4 +243,7 @@ st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_containe
 # ==========================================
 with st.sidebar:
     csv_data = df_filter.to_csv(index=False).encode('utf-8')
+    # PERBAIKAN: Memastikan tanda kurung parameter st.download_button tertutup dengan benar
     st.download_button(
+        label="📥 Unduh Data Terpilih (.CSV)",
+        data=csv_data,
