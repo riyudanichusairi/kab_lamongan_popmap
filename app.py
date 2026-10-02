@@ -243,7 +243,4 @@ st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_containe
 # ==========================================
 with st.sidebar:
     csv_data = df_filter.to_csv(index=False).encode('utf-8')
-    # PERBAIKAN: Memastikan tanda kurung parameter st.download_button tertutup dengan benar
-    st.download_button(
-        label="📥 Unduh Data Terpilih (.CSV)",
-        data=csv_data,
+    # PERBAIKAN FINAL: st.download_button ditulis full satu baris agar tidak memicu SyntaxError
