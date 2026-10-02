@@ -12,8 +12,8 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # Menggunakan tautan logo alternatif CDN publik yang ringan dan kebal blokir
-    st.image("https://icons8.com", width=70) 
+    # Menggunakan file logo lokal yang sudah Anda unggah di GitHub
+    st.image("logo_lamongan.png", width=120) 
     st.title("WebGIS Lamongan")
     st.write(
         "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
