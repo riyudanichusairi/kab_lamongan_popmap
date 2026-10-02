@@ -49,7 +49,7 @@ for fitur in geo_data['features']:
         'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
         'Jumlah Penduduk': props.get('jumlah_penduduk', 0),
         'Laki-laki': props.get('laki_laki', 0),
-        'Perempuan': props.get('perempuan', 0) # Menarik data perempuan dari GeoJSON
+        'Perempuan': props.get('perempuan', 0)
     })
 df = pd.DataFrame(records)
 
@@ -174,10 +174,10 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# PERBAIKAN: Menambahkan kolom 'laki_laki' dan 'perempuan' ke dalam tampilan Pop-up saat diklik
+# PERBAIKAN: Urutan fields & aliases telah diubah agar 'Jumlah Penduduk' berada di bawah 'Perempuan'
 folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
-    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: ", "Laki-laki: ", "Perempuan: "],
+    fields=["KEC", "KEL_DES", "laki_laki", "perempuan", "jumlah_penduduk"],
+    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Laki-laki: ", "Perempuan: ", "Jumlah Penduduk: "],
     localize=True
 ).add_to(choro_layer)
 
