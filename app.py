@@ -4,7 +4,6 @@ from streamlit_folium import st_folium
 import json
 from folium.plugins import Search, Draw
 import pandas as pd
-from shapely.geometry import shape, box
 
 # Konfigurasi halaman penuh (wide mode)
 st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
@@ -231,30 +230,30 @@ folium.LayerControl(position='topleft').add_to(m)
 # Tampilkan peta dan tangkap data geometri dari mouse
 st_peta_data = st_folium(m, height=550, use_container_width=True, key="peta_lamongan_draw")
 
-# LOGIKA SPASIAL: Mendeteksi gambar kotak dari mouse pengguna
+# PERBAIKAN LOGIKA SPASIAL: Menggunakan matematika Bounding Box murni (Bebas dari Modul Shapely)
 if st_peta_data and "last_active_drawing" in st_peta_data:
     info_gambar = st_peta_data["last_active_drawing"]
     
     if info_gambar and info_gambar.get("geometry"):
-        # Buat bentuk geometri pembatas berdasarkan input kotak mouse
-        kotak_seleksi = shape(info_gambar["geometry"])
+        koordinat_kotak = info_gambar["geometry"]["coordinates"][0]
+        # Cari batas ekstrim kotak koordinat mouse (min/max X dan Y)
+        lngs = [k[0] for k in koordinat_kotak]
+        lats = [k[1] for k in koordinat_kotak]
+        min_lng, max_lng = min(lngs), max(lngs)
+        min_lat, max_lat = min(lats), max(lats)
         
         desa_terjaring = []
         for fitur in geo_data['features']:
-            poligon_desa = shape(fitur['geometry'])
-            # Jika poligon desa bersinggungan atau masuk ke dalam kotak mouse, masukkan ke daftar seleksi
-            if kotak_seleksi.intersects(poligon_desa):
-                nama_desa = fitur['properties'].get('KEL_DES')
-                if nama_desa:
-                    desa_terjaring.append(nama_desa)
-        
-        # Perbarui metrik layar jika isi seleksi berubah
-        if sorted(st.session_state.desa_terseksi_spatial) != sorted(desa_terjaring):
-            st.session_state.desa_terseksi_spatial = desa_terjaring
-            st.rerun()
+            # Lakukan ekstraksi koordinat titik-titik penyusun wilayah desa
+            tipe_geom = fitur['geometry']['type']
+            koor_desa = fitur['geometry']['coordinates']
             
-    # Jika gambar kotak dihapus oleh pengguna lewat tong sampah toolbar peta
-    elif info_gambar is None and st.session_state.desa_terseksi_spatial != []:
-        st.session_state.desa_terseksi_spatial = []
-        st.rerun()
-
+            terjaring = False
+            # Menguji titik koordinat desa apakah berada di dalam cakupan kotak mouse
+            if tipe_geom == "Polygon":
+                for ring in koor_desa:
+                    for pt in ring:
+                        if min_lng <= pt[0] <= max_lng and min_lat <= pt[1] <= max_lat:
+                            terjaring = True
+                            break
+                    if terjaring: break
