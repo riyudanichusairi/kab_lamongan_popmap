@@ -11,8 +11,7 @@ st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 with open("kab_lamongan_popmap.geojson", "r") as f:
     geo_data = json.load(f)
 
-# 2. Buat objek peta dasar (Default: OpenStreetMap)
-# Parameter 'tiles=None' digunakan agar kita bisa mendaftarkan banyak basemap dengan nama kustom
+# 2. Buat objek peta dasar
 m = folium.Map(
     location=[-7.12, 112.41], 
     zoom_start=11, 
@@ -20,28 +19,32 @@ m = folium.Map(
     control_scale=True
 )
 
-# 3. MENDAFTARKAN BERBAGAI PILIHAN BASEMAP GRATIS 100%
-# Opsi 1: Peta Jalan Standar (OpenStreetMap)
-folium.TileLayer('openstreetmap', name='Peta Jalan (OpenStreetMap)').add_to(m)
+# 3. PERBAIKAN TOTAL BASEMAP: Menggunakan tautan URL langsung agar 100% muncul dan anti-gagal
+# Opsi 1: Peta Jalan Standar (OpenStreetMap) - Diperbaiki link servernya
+folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    name='Peta Jalan (OpenStreetMap)'
+).add_to(m)
 
-# Opsi 2: Peta Citra Satelit (Google Satellite) - Sangat cocok melihat kondisi asli bumi
+# Opsi 2: Peta Citra Satelit (Google Satellite)
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Google',
+    attr='Google Satellite',
     name='Citra Satelit (Google Satellite)'
 ).add_to(m)
 
-# Opsi 3: Peta Medan / Kontur Bumi (Google Terrain) - Menampilkan relief bukit/gunung
+# Opsi 3: Peta Medan / Kontur Bumi (Google Terrain)
 folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Google',
+    attr='Google Terrain',
     name='Peta Kontur / Relief (Google Terrain)'
 ).add_to(m)
 
-# Opsi 4: Peta Minimalis Hitam/Gelap (CartoDB Dark Matter) - Membuat warna kloroplet biru Anda sangat menyala!
+# Opsi 4: Mode Gelap (CartoDB Dark Matter)
 folium.TileLayer(
     tiles='https://{s}://{z}/{x}/{y}{r}.png',
-    attr='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors &copy; <a href="https://carto.com">CARTO</a>',
+    attr='&copy; OpenStreetMap &copy; CARTO',
     name='Mode Gelap (CartoDB Dark)'
 ).add_to(m)
 
@@ -67,15 +70,15 @@ def ganti_warna(fitur):
         'fillColor': warna, 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.75       # Diturunkan sedikit ke 0.75 agar jika memakai basemap satelit, rumah/jalan di bawahnya agak terlihat bayangannya
+        'fillOpacity': 0.75       
     }
 
-# 5. Memasukkan data GeoJSON ke peta (PENTING: tambahkan argumen control=True)
+# 5. Memasukkan data GeoJSON ke peta
 choro_layer = folium.GeoJson(
     geo_data,
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
-    control=True, # Agar layer kloroplet ini bisa dinyalakan / dimatikan lewat menu kontrol
+    control=True,
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
@@ -143,8 +146,7 @@ folium.features.GeoJsonPopup(
     localize=True
 ).add_to(choro_layer)
 
-# 10. AKTIFKAN TOMBOL PENGENDALI / PEMILIH LAYER (LAYER CONTROL)
-# Mengatur posisi tombol menu switcher di pojok kiri atas (di bawah tombol zoom)
+# 10. AKTIFKAN TOMBOL PENGENDALI LAYER
 folium.LayerControl(position='topleft').add_to(m)
 
 # 11. Tampilkan peta ke web Streamlit
