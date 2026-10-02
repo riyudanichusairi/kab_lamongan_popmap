@@ -6,45 +6,35 @@ import json
 st.set_page_config(layout="wide")
 st.title("WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
-# 1. Buka file GeoJSON menggunakan penanganan error yang aman
-try:
-    with open("kab_lamongan_popmap.geojson", "r") as f:
-        geo_data = json.load(f)
-except Exception as e:
-    st.error(f"Gagal memuat berkas GeoJSON: {e}")
-    st.stop()
+# 1. Buka file GeoJSON
+with open("kab_lamongan_popmap.geojson", "r") as f:
+    geo_data = json.load(f)
 
-# 2. Buat objek peta dasar OpenStreetMap (OSM) asli
+# 2. Buat objek peta dengan OpenStreetMap (OSM) asli
 m = folium.Map(location=[-7.12, 112.41], zoom_start=10, tiles="OpenStreetMap")
 
-# 3. Fungsi mewarnai peta yang fleksibel dan kebal error data
+# 3. Fungsi mewarnai peta otomatis berdasarkan angka penduduk desa
 def ganti_warna(fitur):
-    props = fitur.get('properties', {})
+    jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     
-    # Deteksi ganda untuk kolom warna buatan QGIS Anda
-    warna = props.get('warna_hex', props.get('WARNA_HEX', None))
-    
-    # Jika kolom warna QGIS kosong atau tidak terbaca, gunakan kalkulasi otomatis berbasis jumlah penduduk
-    if not warna:
-        jumlah_pop = props.get('jumlah_penduduk', props.get('JUMLAH_PENDUDUK', 0))
-        if jumlah_pop > 6000:
-            warna = '#081d58'
-        elif jumlah_pop > 4500:
-            warna = '#253494'
-        elif jumlah_pop > 3000:
-            warna = '#1d91c0'
-        elif jumlah_pop > 2000:
-            warna = '#41b6c4'
-        elif jumlah_pop > 1000:
-            warna = '#7fcdbb'
-        else:
-            warna = '#ffffcc'
+    if jumlah_pop > 6000:
+        warna = '#081d58'
+    elif jumlah_pop > 4500:
+        warna = '#253494'
+    elif jumlah_pop > 3000:
+        warna = '#1d91c0'
+    elif jumlah_pop > 2000:
+        warna = '#41b6c4'
+    elif jumlah_pop > 1000:
+        warna = '#7fcdbb'
+    else:
+        warna = '#ffffcc'
             
     return {
         'fillColor': warna, 
-        'color': '#666666',      # Garis batas wilayah abu-abu tipis
-        'weight': 0.6,           
-        'fillOpacity': 0.8       # Warna tegas, terang, dan tidak berkabut
+        'color': '#666666',      
+        'weight': 0.5,           
+        'fillOpacity': 0.8       
     }
 
 # 4. Memasukkan data GeoJSON ke peta
@@ -55,17 +45,35 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# 5. Menambahkan Fitur Pop-up yang fleksibel (otomatis membaca data yang tersedia)
-props_sample = geo_data['features'][0].get('properties', {}) if geo_data.get('features') else {}
-list_fields = [k for k in ["KEC", "KEL_DES", "jumlah_penduduk"] if k in props_sample]
-list_aliases = ["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "][:len(list_fields)]
+# 5. MENAMBAHKAN KOTAK LEGENDA MANUAl (Agar terbaca di HP & Laptop)
+legenda_html = '''
+<div style="
+    position: fixed; 
+    bottom: 50px; left: 50px; width: 220px; height: 180px; 
+    border:2px solid grey; z-index:9999; font-size:12px;
+    background-color:white;
+    padding: 10px;
+    opacity: 0.85;
+    font-family: sans-serif;
+    border-radius: 5px;
+    ">
+    <b>Legenda Penduduk (Jiwa)</b><br>
+    <i style="background:#081d58; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> > 6.000<br>
+    <i style="background:#253494; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 4.501 - 6.000<br>
+    <i style="background:#1d91c0; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 3.001 - 4.500<br>
+    <i style="background:#41b6c4; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 2.001 - 3.000<br>
+    <i style="background:#7fcdbb; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> 1.001 - 2.000<br>
+    <i style="background:#ffffcc; width:18px; height:18px; float:left; margin-right:8px; opacity:0.8;"></i> &le; 1.000<br>
+</div>
+'''
+m.get_root().html.add_child(folium.Element(legenda_html))
 
-if list_fields:
-    folium.features.GeoJsonPopup(
-        fields=list_fields,
-        aliases=list_aliases,
-        localize=True
-    ).add_to(choro_layer)
+# 6. Menambahkan Fitur Pop-up
+folium.features.GeoJsonPopup(
+    fields=["KEC", "KEL_DES", "jumlah_penduduk"],
+    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
+    localize=True
+).add_to(choro_layer)
 
-# 6. Tampilkan peta ke web Streamlit
-st_folium(m, width=1100, height=650)
+# 7. Tampilkan peta ke web Streamlit (Menggunakan use_container_width agar responsif di HP)
+st_folium(m, height=650, use_container_width=True)
