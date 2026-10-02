@@ -72,7 +72,7 @@ else:
     label_status = "Total Lamongan"
     total_desa = int(df['Desa'].nunique())
 
-# Hitung ringkasan statistik
+# Hitung ringkasan statistik secara dinamis berdasarkan hasil filter area
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
@@ -114,11 +114,11 @@ plugin_gambar = Draw(
     position="topleft",
     draw_options={
         'polyline': False,
-        'polygon': True,      # PERBAIKAN: Aktifkan seleksi poligon bebas ala MapInfo
+        'polygon': True,      
         'circle': False,
         'marker': False,
         'circlemarker': False,
-        'rectangle': True     # Tetap aktifkan opsi kotak sebagai alternatif cepat
+        'rectangle': True     
     },
     edit_options={
         'poly': {'allowIntersection': False}
@@ -130,7 +130,7 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     nama_desa_fitur = fitur['properties'].get('KEL_DES')
     
-    # Beri warna khusus jika desa masuk ke dalam area seleksi poligon mouse
+    # Beri warna khusus jingga menyala jika desa masuk ke dalam area seleksi poligon mouse
     if st.session_state.desa_terseksi_spatial and nama_desa_fitur in st.session_state.desa_terseksi_spatial:
         return {
             'fillColor': '#ff7800', 
@@ -248,14 +248,15 @@ def titik_dalam_poligon(x, y, poli):
         p1x, p1y = p2x, p2y
     return di_dalam
 
-# LOGIKA SPASIAL: Mendeteksi gambar poligon/kotak dari mouse pengguna
+# LOGIKA SPASIAL PERBAIKAN: Mengurai array bertingkat dari output geometry koordinat Folium Draw
 if st_peta_data and "last_active_drawing" in st_peta_data:
     info_gambar = st_peta_data["last_active_drawing"]
     
     if info_gambar and info_gambar.get("geometry"):
         tipe_draw = info_gambar["geometry"]["type"]
         
-        # Ekstrak titik-titik koordinat pembatas dari poligon bentukan mouse
         if tipe_draw in ["Polygon", "MultiPolygon"]:
-            simpul_peta = info_gambar["geometry"]["coordinates"][0]
-            # Menghilangkan dimensi koordinat z jika ada
+            coords_raw = info_gambar["geometry"]["coordinates"]
+            
+            # PERBAIKAN UTAMA: Mengambil list koordinat datar [lng, lat] dari dalam array bersarang
+            simpul_bersih = []
