@@ -24,9 +24,9 @@ with st.sidebar:
     )
     st.markdown("---")
     st.write("📌 **Panduan Penggunaan:**")
-    st.caption("1. KLIK LANGSUNG pada area wilayah desa di peta untuk menyeleksi desa tersebut.")
-    st.caption("2. Keterangan metrik di atas peta akan otomatis berubah mengikuti desa yang Anda klik.")
-    st.caption("3. Gunakan tombol 'Reset Seleksi' jika ingin kembali menampilkan total data se-Kabupaten.")
+    st.caption("1. Gunakan kolom pencarian di kanan atas peta untuk mencari desa tertentu.")
+    st.caption("2. Arahkan kursor (*hover*) atau klik pada wilayah desa untuk melihat detail data.")
+    st.caption("3. Gunakan fitur 'Filter Desa' di atas peta untuk menyeleksi beberapa desa sekaligus.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -51,41 +51,47 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Inisialisasi Session State agar pilihan klik mouse tersimpan stabil
-if "desa_terpilih_mouse" not in st.session_state:
-    st.session_state.desa_terpilih_mouse = None
-
 # ==========================================
-# 3. LOGIKA FILTER DINAMIS BERDASARKAN KLIK MOUSE
+# 3. FITUR SELEKSI DESA (MULTISELECT)
 # ==========================================
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
-# Menyediakan tombol reset jika pengguna ingin mengembalikan data ke seluruh kabupaten
-if st.session_state.desa_terpilih_mouse:
-    st.write(f"📍 **Desa Terseleksi Aktif lewat Peta:** `{st.session_state.desa_terpilih_mouse}`")
-    if st.button("🔄 Reset Seleksi (Tampilkan Semua Data Lamongan)", type="primary"):
-        st.session_state.desa_terpilih_mouse = None
-        st.rerun()
-else:
-    st.info("💡 **Petunjuk:** Klik salah satu wilayah desa langsung di dalam peta untuk melihat ringkasan statistiknya di bawah ini.")
+# Ambil daftar semua desa unik untuk opsi pilihan (diurutkan secara alfabetis)
+daftar_desa = sorted(df['Desa'].unique())
 
-# Jalankan logika penyaringan data berdasarkan status klik mouse
-if st.session_state.desa_terpilih_mouse:
-    df_filter = df[df['Desa'] == st.session_state.desa_terpilih_mouse]
-    label_status = f"Desa {st.session_state.desa_terpilih_mouse}"
-    total_desa = 1
+# Widget Pilihan Ganda untuk menyeleksi desa
+desa_terpilih = st.multiselect(
+    "🔍 **Pilih / Seleksi Beberapa Desa di Sini:**",
+    options=daftar_desa,
+    placeholder="Ketik atau pilih nama beberapa desa..."
+)
+
+# Jalankan logika penyaringan data berdasarkan pilihan pengguna
+if desa_terpilih:
+    # Jika ada desa yang dipilih, filter DataFrame dan GeoJSON
+    df_filter = df[df['Desa'].isin(desa_terpilih)]
+    
+    geo_data_filter = geo_data.copy()
+    geo_data_filter['features'] = [
+        f for f in geo_data['features'] 
+        if f['properties'].get('KEL_DES') in desa_terpilih
+    ]
+    
+    label_status = "Hasil Seleksi"
 else:
+    # Jika tidak ada yang dipilih, tampilkan data Lamongan secara global keseluruhan
     df_filter = df
+    geo_data_filter = geo_data
     label_status = "Total Lamongan"
-    total_desa = int(df['Desa'].nunique())
 
-# Hitung data statistik dinamis sesuai wilayah yang diklik mouse
+# Hitung data statistik dinamis berdasarkan data yang sudah terfilter
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
+total_desa = int(df_filter['Desa'].nunique())
 
 # ==========================================
-# 4. MENAMPILKAN 4 KOLOM METRIK (HASIL KLIK MOUSE)
+# 4. MENAMPILKAN 4 KOLOM METRIK HASIL SELEKSI
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -100,7 +106,7 @@ with col4:
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # ==========================================
-# 5. MEMBANGUN PETA FOLIUM
+# 5. MEMBANGUN PETA FOLIUM (BERDASARKAN DATA FILTER)
 # ==========================================
 m = folium.Map(
     location=[-7.12, 112.41], 
@@ -117,17 +123,6 @@ folium.TileLayer(
 
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    nama_desa_fitur = fitur['properties'].get('KEL_DES')
-    
-    # Highlight warna jingga jika desa tersebut sedang diklik
-    if st.session_state.desa_terpilih_mouse and nama_desa_fitur == st.session_state.desa_terpilih_mouse:
-        return {
-            'fillColor': '#ff7800', 
-            'color': '#ff0000',      
-            'weight': 3.0,           
-            'fillOpacity': 0.9       
-        }
-        
     if jumlah_pop > 6000:
         warna = '#081d58'
     elif jumlah_pop > 4500:
@@ -148,8 +143,9 @@ def ganti_warna(fitur):
         'fillOpacity': 0.75       
     }
 
+# Memasukkan data geo_data_filter yang dinamis ke dalam peta
 choro_layer = folium.GeoJson(
-    geo_data,
+    geo_data_filter,
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
@@ -217,23 +213,14 @@ folium.features.GeoJsonPopup(
 
 folium.LayerControl(position='topleft').add_to(m)
 
-# Tampilkan peta ke aplikasi web Streamlit dan tangkap interaksi mouse
-st_peta_data = st_folium(m, height=550, use_container_width=True, key="peta_lamongan")
-
-if st_peta_data and "last_active_drawing" in st_peta_data and st_peta_data["last_active_drawing"]:
-    fitur_terklik = st_peta_data["last_active_drawing"]
-    if "properties" in fitur_terklik and "KEL_DES" in fitur_terklik["properties"]:
-        desa_terdeteksi = fitur_terklik["properties"]["KEL_DES"]
-        
-        if st.session_state.desa_terpilih_mouse != desa_terdeteksi:
-            st.session_state.desa_terpilih_mouse = desa_terdeteksi
-            st.rerun()
+# Tampilkan peta ke aplikasi web Streamlit
+st_folium(m, height=550, use_container_width=True)
 
 # ==========================================
 # 6. GRAFIK DENGAN DATA FILTER
 # ==========================================
 st.markdown("---")
-st.markdown("### 📊 Grafik Perbandingan Jumlah Penduduk per Kecamatan (Sesuai Pilihan)")
+st.markdown("### 📊 Grafik Perbandingan Jumlah Penduduk per Kecamatan (Data Terfilter)")
 df_kecamatan = df_filter.groupby('Kecamatan')['Jumlah Penduduk'].sum().reset_index()
 df_kecamatan = df_kecamatan.sort_values(by='Jumlah Penduduk', ascending=False)
 st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_container_width=True)
@@ -243,4 +230,17 @@ st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_containe
 # ==========================================
 with st.sidebar:
     csv_data = df_filter.to_csv(index=False).encode('utf-8')
-    # PERBAIKAN FINAL: st.download_button ditulis full satu baris agar tidak memicu SyntaxError
+    st.download_button(
+        label="📥 Unduh Data Terfilter (.CSV)",
+        data=csv_data,
+        file_name="data_penduduk_lamongan_filter.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+    
+    st.markdown("---")
+    st.write("🔗 **Bagikan WebGIS Ini:**")
+    url_webgis = "https://streamlit.app"
+    
+    if st.button("📋 Klik untuk Tampilkan Tautan", use_container_width=True):
+        st.success(f"Salin tautan ini: {url_webgis}")
