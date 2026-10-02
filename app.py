@@ -86,18 +86,6 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-folium.TileLayer(
-    tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Google Satellite',
-    name='Citra Satelit (Google Satellite)'
-).add_to(m)
-
-folium.TileLayer(
-    tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Google Hybrid',
-    name='Satelit + Jalan (Google Hybrid)'
-).add_to(m)
-
 # Fungsi pewarnaan otomatis kloroplet desa
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
