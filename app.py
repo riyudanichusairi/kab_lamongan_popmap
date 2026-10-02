@@ -12,11 +12,9 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # Mengatur rasio kolom (1.5 untuk kiri/kanan, 7 untuk tengah) 
-    # agar kolom tengah lebih luas sehingga gambar logo bisa membesar pas di tengah
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
-        st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
+        st.write("") 
         st.image("logo_lamongan.png", use_container_width=True) 
     
     st.title("WebGIS Lamongan")
@@ -50,7 +48,8 @@ for fitur in geo_data['features']:
         'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
         'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
         'Jumlah Penduduk': props.get('jumlah_penduduk', 0),
-        'Laki-laki': props.get('laki_laki', 0)
+        'Laki-laki': props.get('laki_laki', 0),
+        'Perempuan': props.get('perempuan', 0) # Menarik data perempuan dari GeoJSON
     })
 df = pd.DataFrame(records)
 
@@ -59,7 +58,7 @@ total_penduduk_global = int(df['Jumlah Penduduk'].sum())
 desa_terpadat = df.loc[df['Jumlah Penduduk'].idxmax()]
 desa_terjarang = df.loc[df['Jumlah Penduduk'].idxmin()]
 
-# Tampilkan data statistik
+# Tampilkan data statistik global
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric("Total Penduduk Terdata", f"{total_penduduk_global:,} Jiwa")
@@ -175,10 +174,10 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-# Pop-up data lengkap saat diklik
+# PERBAIKAN: Menambahkan kolom 'laki_laki' dan 'perempuan' ke dalam tampilan Pop-up saat diklik
 folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "jumlah_penduduk"],
-    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: "],
+    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Jumlah Penduduk: ", "Laki-laki: ", "Perempuan: "],
     localize=True
 ).add_to(choro_layer)
 
@@ -212,8 +211,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.write("🔗 **Bagikan WebGIS Ini:**")
-    # PERBAIKAN: URL sudah disesuaikan ke alamat domain kustom Anda
-    url_webgis = "https://lamongan-popmap.streamlit.app/"
+    url_webgis = "https://streamlit.app"
     
     if st.button("📋 Klik untuk Tampilkan Tautan", use_container_width=True):
         st.success(f"Salin tautan ini: {url_webgis}")
