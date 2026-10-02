@@ -12,13 +12,13 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐"
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
-    # PERBAIKAN: Mengatur rasio kolom (1.5 untuk kiri/kanan, 7 untuk tengah) 
+    # Mengatur rasio kolom (1.5 untuk kiri/kanan, 7 untuk tengah) 
     # agar kolom tengah lebih luas sehingga gambar logo bisa membesar pas di tengah
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") # Memberikan ruang kosong di atas logo agar tidak menempel batas layar
-        # PERBAIKAN: use_column_width=True agar logo membesar memenuhi kolom tengah yang baru
-        st.image("logo_lamongan.png", use_column_width=True) 
+        # PERBAIKAN TOTAL: Menggunakan use_container_width=True untuk mengatasi TypeError
+        st.image("logo_lamongan.png", use_container_width=True) 
     
     st.title("WebGIS Lamongan")
     st.write(
