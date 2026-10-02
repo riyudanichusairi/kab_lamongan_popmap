@@ -15,7 +15,8 @@ with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") 
-        st.image("logo_lamongan.png", use_column_width=True) 
+        # Diperbaiki kembali menggunakan use_container_width agar tidak memicu TypeError
+        st.image("logo_lamongan.png", use_container_width=True) 
     
     st.title("WebGIS Lamongan")
     st.write(
@@ -255,7 +256,6 @@ elif kecamatan_terpilih != "-- Semua Kecamatan --":
     df_chart_kec = df_filter.set_index('Desa')[['Jumlah Penduduk']].sort_values(by='Jumlah Penduduk', ascending=False)
     st.bar_chart(df_chart_kec)
 else:
-    st.info("💡 **Tips:** Gunakan filter Kecamatan dan Desa di atas untuk memunculkan grafik visualisasi data yang spesifik.")
+    st.info("💡 **Tips:** Gunakan filter Kecamatan and Desa di atas untuk memunculkan grafik visualisasi data yang spesifik.")
     st.caption("Menampilkan 10 Desa/Kelurahan dengan Jumlah Penduduk Tertinggi di Kabupaten Lamongan:")
     df_top10 = df.nlargest(10, 'Jumlah Penduduk').set_index('Desa')[['Jumlah Penduduk']]
-    st.bar_chart(df_top10)
