@@ -2,7 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
-from folium.plugins import Search, Draw
+from folium.plugins import Search
 import pandas as pd
 
 # Konfigurasi halaman penuh (wide mode)
@@ -23,18 +23,16 @@ with st.sidebar:
         "kependudukan tingkat Desa/Kelurahan di wilayah Kabupaten Lamongan, Provinsi Jawa Timur."
     )
     st.markdown("---")
-    st.write("📌 **Panduan Tool Seleksi Poligon (MapInfo Style):**")
-    st.caption("1. Gunakan ikon ⬠ **Poligon (Draw a polygon)** pada menu toolbar di kiri peta.")
-    st.caption("2. Klik mouse di beberapa titik peta secara berurutan untuk membentuk area seleksi bebas.")
-    st.caption("3. Klik kembali pada titik pertama untuk menutup bentuk poligon.")
-    st.caption("4. Angka metrik di atas peta akan otomatis menghitung desa yang masuk ke dalam poligon tersebut.")
-    st.caption("5. Untuk menghapus area poligon, klik ikon 🗑️ pada toolbar peta.")
+    st.write("📌 **Panduan Penggunaan:**")
+    st.caption("1. Gunakan kolom pencarian di kanan atas peta untuk mencari desa tertentu.")
+    st.caption("2. Arahkan kursor (*hover*) atau klik pada wilayah desa untuk melihat detail data.")
+    st.caption("3. Gunakan fitur 'Filter Desa' di atas peta untuk menyeleksi beberapa desa sekaligus.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
 
 # ==========================================
-# 2. DATA MANAGEMENT & INISIALISASI
+# 2. DATA MANAGEMENT
 # ==========================================
 # Buka file GeoJSON
 with open("kab_lamongan_popmap.geojson", "r") as f:
@@ -53,32 +51,47 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Inisialisasi Session State untuk menyimpan desa yang masuk dalam poligon mouse
-if "desa_terseksi_spatial" not in st.session_state:
-    st.session_state.desa_terseksi_spatial = []
-
 # ==========================================
-# 3. KONTEN UTAMA & LOGIKA FILTER SPASIAL MOUSE
+# 3. FITUR SELEKSI DESA (MULTISELECT)
 # ==========================================
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
-# Menentukan apakah filter spasial aktif
-if st.session_state.desa_terseksi_spatial:
-    df_filter = df[df['Desa'].isin(st.session_state.desa_terseksi_spatial)]
-    label_status = "Hasil Seleksi Poligon"
-    total_desa = len(st.session_state.desa_terseksi_spatial)
-else:
-    df_filter = df
-    label_status = "Total Lamongan"
-    total_desa = int(df['Desa'].nunique())
+# Ambil daftar semua desa unik untuk opsi pilihan (diurutkan secara alfabetis)
+daftar_desa = sorted(df['Desa'].unique())
 
-# Hitung ringkasan statistik secara dinamis berdasarkan hasil filter area
+# Widget Pilihan Ganda untuk menyeleksi desa
+desa_terpilih = st.multiselect(
+    "🔍 **Pilih / Seleksi Beberapa Desa di Sini:**",
+    options=daftar_desa,
+    placeholder="Ketik atau pilih nama beberapa desa..."
+)
+
+# Jalankan logika penyaringan data berdasarkan pilihan pengguna
+if desa_terpilih:
+    # Jika ada desa yang dipilih, filter DataFrame dan GeoJSON
+    df_filter = df[df['Desa'].isin(desa_terpilih)]
+    
+    geo_data_filter = geo_data.copy()
+    geo_data_filter['features'] = [
+        f for f in geo_data['features'] 
+        if f['properties'].get('KEL_DES') in desa_terpilih
+    ]
+    
+    label_status = "Hasil Seleksi"
+else:
+    # Jika tidak ada yang dipilih, tampilkan data Lamongan secara global keseluruhan
+    df_filter = df
+    geo_data_filter = geo_data
+    label_status = "Total Lamongan"
+
+# Hitung data statistik dinamis berdasarkan data yang sudah terfilter
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
+total_desa = int(df_filter['Desa'].nunique())
 
 # ==========================================
-# 4. MENAMPILKAN 4 KOLOM METRIK (HASIL FILTER SPASIAL)
+# 4. MENAMPILKAN 4 KOLOM METRIK HASIL SELEKSI
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -93,7 +106,7 @@ with col4:
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # ==========================================
-# 5. MEMBANGUN PETA FOLIUM DENGAN TOOL POLYGON DRAW
+# 5. MEMBANGUN PETA FOLIUM (BERDASARKAN DATA FILTER)
 # ==========================================
 m = folium.Map(
     location=[-7.12, 112.41], 
@@ -108,37 +121,8 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Mengaktifkan Toolbar Seleksi Poligon Bebas (Draw Plugin)
-plugin_gambar = Draw(
-    export=False,
-    position="topleft",
-    draw_options={
-        'polyline': False,
-        'polygon': True,      
-        'circle': False,
-        'marker': False,
-        'circlemarker': False,
-        'rectangle': True     
-    },
-    edit_options={
-        'poly': {'allowIntersection': False}
-    }
-)
-plugin_gambar.add_to(m)
-
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    nama_desa_fitur = fitur['properties'].get('KEL_DES')
-    
-    # Beri warna khusus jingga menyala jika desa masuk ke dalam area seleksi poligon mouse
-    if st.session_state.desa_terseksi_spatial and nama_desa_fitur in st.session_state.desa_terseksi_spatial:
-        return {
-            'fillColor': '#ff7800', 
-            'color': '#ff0000',      
-            'weight': 1.5,           
-            'fillOpacity': 0.85       
-        }
-        
     if jumlah_pop > 6000:
         warna = '#081d58'
     elif jumlah_pop > 4500:
@@ -159,8 +143,9 @@ def ganti_warna(fitur):
         'fillOpacity': 0.75       
     }
 
+# Memasukkan data geo_data_filter yang dinamis ke dalam peta
 choro_layer = folium.GeoJson(
-    geo_data,
+    geo_data_filter,
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
@@ -228,35 +213,34 @@ folium.features.GeoJsonPopup(
 
 folium.LayerControl(position='topleft').add_to(m)
 
-# Tampilkan peta dan tangkap data geometri dari mouse
-st_peta_data = st_folium(m, height=550, use_container_width=True, key="peta_lamongan_draw")
+# Tampilkan peta ke aplikasi web Streamlit
+st_folium(m, height=550, use_container_width=True)
 
-# Fungsi Matematika Ray-Casting untuk memeriksa apakah sebuah titik berada di dalam poligon
-def titik_dalam_poligon(x, y, poli):
-    n = len(poli)
-    di_dalam = False
-    p1x, p1y = poli[0]
-    for i in range(n + 1):
-        p2x, p2y = poli[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xints:
-                        di_dalam = not di_dalam
-        p1x, p1y = p2x, p2y
-    return di_dalam
+# ==========================================
+# 6. GRAFIK DENGAN DATA FILTER
+# ==========================================
+st.markdown("---")
+st.markdown("### 📊 Grafik Perbandingan Jumlah Penduduk per Kecamatan (Data Terfilter)")
+df_kecamatan = df_filter.groupby('Kecamatan')['Jumlah Penduduk'].sum().reset_index()
+df_kecamatan = df_kecamatan.sort_values(by='Jumlah Penduduk', ascending=False)
+st.bar_chart(data=df_kecamatan, x='Kecamatan', y='Jumlah Penduduk', use_container_width=True)
 
-# LOGIKA SPASIAL PERBAIKAN: Mengurai array bertingkat dari output geometry koordinat Folium Draw
-if st_peta_data and "last_active_drawing" in st_peta_data:
-    info_gambar = st_peta_data["last_active_drawing"]
+# ==========================================
+# 7. BUTTON UNDUH & SALIN URL PADA SIDEBAR
+# ==========================================
+with st.sidebar:
+    csv_data = df_filter.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Unduh Data Terfilter (.CSV)",
+        data=csv_data,
+        file_name="data_penduduk_lamongan_filter.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
     
-    if info_gambar and info_gambar.get("geometry"):
-        tipe_draw = info_gambar["geometry"]["type"]
-        
-        if tipe_draw in ["Polygon", "MultiPolygon"]:
-            coords_raw = info_gambar["geometry"]["coordinates"]
-            
-            # PERBAIKAN UTAMA: Mengambil list koordinat datar [lng, lat] dari dalam array bersarang
-            simpul_bersih = []
+    st.markdown("---")
+    st.write("🔗 **Bagikan WebGIS Ini:**")
+    url_webgis = "https://streamlit.app"
+    
+    if st.button("📋 Klik untuk Tampilkan Tautan", use_container_width=True):
+        st.success(f"Salin tautan ini: {url_webgis}")
