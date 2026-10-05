@@ -10,17 +10,18 @@ import branca.colormap as cm
 st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
 # ==========================================
-# 1. MEMBUAT PANEL SAMPING (SIDEBAR)
+# 3. STRUKTUR SIDEBAR (BILAH SAMPING)
 # ==========================================
 with st.sidebar:
+    # Mengatur layout kolom agar logo berada di tengah sidebar
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") 
         try:
-            # Menggunakan logo_path yang jalurnya sudah pasti aman
+            # Memanggil berkas menggunakan jalur absolut yang aman
             st.image(logo_path, use_container_width=True)
         except Exception as e:
-            st.warning(f"⚠️ Logo tidak ditemukan. Eror: {e}")
+            st.warning(f"⚠️ Logo logo_lamongan.png tidak ditemukan. Eror: {e}")
     
     st.title("WebGIS Lamongan")
     st.write(
