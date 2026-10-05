@@ -1,99 +1,66 @@
-import os
 import streamlit as st
+import geopandas as gpd
+import folium
+from streamlit_folium import st_folium
 
-# 1. PENGATURAN HALAMAN (Wajib ditaruh di baris paling atas setelah import)
+# 1. Mengatur konfigurasi halaman WebGIS
 st.set_page_config(
-    page_title="Dashboard WebGIS Lamongan",
-    page_icon="📊",
-    layout="wide",  # Mengaktifkan mode layar penuh/lebar sesuai gambar Anda
-    initial_sidebar_state="expanded"
+    page_title="WebGIS Kab. Lamongan",
+    page_icon="🗺️",
+    layout="wide"
 )
 
-# 2. PENANGANAN JALUR LOGO ABSOLUT
-current_dir = os.path.dirname(os.path.abspath(__file__))
-logo_path = os.path.join(current_dir, "logo_lamongan.png")
+# 2. Membuat judul dan deskripsi di halaman web
+st.title("🗺️ WebGIS Interaktif Kabupaten Lamongan")
+st.markdown("""
+Aplikasi WebGIS ini dibuat 100% gratis menggunakan **Streamlit, GitHub, dan QGIS/GeoPandas**. 
+Anda dapat melihat visualisasi data spasial secara interaktif di bawah ini.
+""")
 
-# ==========================================
-# 3. STRUKTUR SIDEBAR (BILAH SAMPING)
-# ==========================================
-with st.sidebar:
-    # Mengatur layout kolom agar logo berada di tengah sidebar
-    col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
-    with col_center:
-        st.write("") 
-        try:
-            # Memanggil berkas menggunakan jalur absolut yang aman
-            st.image(logo_path, use_container_width=True)
-        except Exception as e:
-            st.warning(f"⚠️ Logo logo_lamongan.png tidak ditemukan. Eror: {e}")
+# 3. Memuat data spasial GeoJSON
+# Pastikan file 'kab_lamongan_popmap.geojson' diunggah di folder GitHub yang sama dengan app.py
+try:
+    @st.cache_data # Fitur ini membuat loading peta jadi lebih cepat setelah dibuka pertama kali
+    def load_data():
+        gdf = gpd.read_file("kab_lamongan_popmap.geojson")
+        # Memastikan sistem koordinat menggunakan WGS 84 (format standar peta web)
+        if gdf.crs != "EPSG:4326":
+            gdf = gdf.to_crs(epsg=4326)
+        return gdf
 
-    # Informasi Aplikasi di Sidebar
-    st.markdown("### WebGIS Lamongan")
-    st.caption(
-        "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan "
-        "analisis data kependudukan tingkat Desa/Kelurahan di wilayah "
-        "Kabupaten Lamongan, Provinsi Jawa Timur."
-    )
-    
-    st.write("---")
-    
-    # Panduan Penggunaan
-    st.markdown("#### 📌 Panduan Penggunaan:")
-    st.markdown(
-        "1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.\n"
-        "2. Peta akan otomatis melakukan ZOOM ke area wilayah yang terpilih."
-    )
+    data_lamongan = load_data()
 
+    # 4. Membuat layout kolom untuk statistik sederhana di atas peta
+    total_fitur = len(data_lamongan)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label="Total Objek/Wilayah Terdata", value=f"{total_fitur} Data")
+    with col2:
+        st.info("💡 Arahkan kursor atau klik pada objek peta untuk melihat informasi detail.")
 
-# ==========================================
-# 4. STRUKTUR KONTEN UTAMA (MAIN DASHBOARD)
-# ==========================================
+    # 5. Membuat Peta Dasar menggunakan Folium
+    # Koordinat diatur otomatis di area Lamongan (-7.12, 112.41)
+    m = folium.Map(location=[-7.12, 112.41], zoom_start=10, tiles="OpenStreetMap")
 
-# Judul Utama Dashboard
-st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
-st.write("---")
+    # 6. Memasukkan data GeoJSON ke dalam Peta Folium
+    # Fitur pop-up otomatis mendeteksi kolom 'Nama' atau kolom pertama yang ada di data Anda
+    folium.GeoJson(
+        data_lamongan,
+        name="Batas Wilayah Lamongan",
+        tooltip=folium.GeoJsonTooltip(
+            fields=[data_lamongan.columns[0]], # Mengambil kolom pertama data sebagai teks saat kursor menempel
+            aliases=["Info:"],
+            localize=True
+        )
+    ).add_to(m)
 
-# Bagian 1: Penyaringan Data Dashboard
-st.markdown("### 🔍 Penyaringan Data Dashboard")
+    # Kontrol layer peta
+    folium.LayerControl().add_to(m)
 
-# Filter Kecamatan
-st.markdown("**📍 Langkah 1: Filter Berdasarkan Kecamatan :**")
-pilihan_kecamatan = st.selectbox(
-    "Pilih Kecamatan",
-    options=["- Semua Kecamatan -", "Lamongan", "Babot", "Glagah", "Sukodadi"],
-    label_visibility="collapsed" # Menyembunyikan label bawaan agar rapi mirip gambar Anda
-)
+    # 7. Menampilkan peta ke halaman web Streamlit
+    st_folium(m, width="100%", height=600)
 
-# Filter Desa/Kelurahan
-st.markdown("**🔍 Langkah 2: Pilih Berdasarkan Desa/Kelurahan :**")
-pilihan_desa = st.multiselect(
-    "Ketik atau pilih nama beberapa desa...",
-    options=["Desa A", "Desa B", "Kelurahan C"],
-    placeholder="Ketik atau pilih nama beberapa desa..."
-)
-
-st.write("")
-
-# Bagian 2: Ringkasan Data Webgis (Metric Cards)
-st.markdown("### 📊 Ringkasan Data Webgis")
-
-# Membuat 4 kolom untuk menampilkan metrik angka sesuai di gambar
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-with kpi1:
-    st.metric(label="Total Penduduk", value="1,327,897 Jiwa")
-
-with kpi2:
-    st.metric(label="Laki-laki", value="670,136 Jiwa")
-
-with kpi3:
-    st.metric(label="Perempuan", value="657,743 Jiwa")
-
-with kpi4:
-    st.metric(label="Jumlah Wilayah (Desa)", value="444 Wilayah")
-
-st.write("---")
-
-# Area Peta (Silakan integrasikan dengan objek Folium atau Plotly Anda di bawah ini)
-st.markdown("### 🗺️ Visualisasi Peta Spasial")
-st.info("Tempatkan komponen peta interaktif Anda (st_folium / st.plotly_chart) di area ini.")
+except FileNotFoundError:
+    st.error("❌ Berkas 'kab_lamongan_popmap.geojson' tidak ditemukan! Pastikan Anda sudah mengunggah berkas peta tersebut ke GitHub dengan nama yang sama.")
+except Exception as e:
+    st.error(f"⚠️ Terjadi kesalahan saat memuat peta: {e}")
