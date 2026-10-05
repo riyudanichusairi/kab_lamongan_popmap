@@ -57,7 +57,7 @@ for fitur in geo_data['features']:
     link_gmaps = f"https://google.com{query_pencarian.replace(' ', '+')}"
     
     # Menyisipkan tag HTML Link ke dalam properti GeoJSON untuk dibaca komponen Pop-up Folium
-    fitur['properties']['gmaps_link'] = f'<a href="{link_gmaps}" target="_blank" style="color: #007bff; text-decoration: underline;">🌐 Buka di Google Maps</a>'
+    fitur['properties']['gmaps_link'] = f'<a href="{link_gmaps}" target="_blank" style="color: #007bff; text-decoration: underline; font-weight: bold;">🌐 Buka di Google Maps</a>'
 
     records.append({
         'Kecamatan': nama_kec,
@@ -155,7 +155,7 @@ with st.sidebar:
         st.markdown("---")
         st.write("🗺️ **Rute Google Maps Desa Terpilih:**")
         for des in desa_terpilih:
-            # Mencari pasangan kecamatan dari desa terpilih secara aman
+            # Mencari pasangan kecamatan dari desa terpilih secara aman menggunakan .iloc
             match_row = df[df['Desa'] == des]
             if not match_row.empty:
                 kec_asal = match_row.iloc[0]['Kecamatan']
@@ -262,7 +262,7 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# FITUR POP-UP DEMOGRAFI DENGAN INTEGRASI GOOGLE MAPS (Ditambahkan properti 'gmaps_link')
+# FITUR POP-UP DEMOGRAFI DENGAN INTEGRASI GOOGLE MAPS (Sintaks kurung tutup ')' sudah diperbaiki)
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan", "gmaps_link"],
     aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:", "Tautan Luar:"],
