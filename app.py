@@ -7,7 +7,7 @@ import pandas as pd
 import branca.colormap as cm
 
 # Konfigurasi halaman penuh (wide mode)
-st.set_page_config(layout="wide", page_title="WebGIS Penduduk Lamongan 2024", page_icon="🌐")
+st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
 # ==========================================
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
@@ -21,7 +21,7 @@ with st.sidebar:
         except:
             st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
     
-    st.title("WebGIS Lamongan")
+    st.title("WebGIS Penduduk Lamongan 2024")
     st.write(
         "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
         "kependudukan tingkat Desa/Kelurahan di wilayah Kabupaten Lamongan, Provinsi Jawa Timur."
@@ -59,7 +59,7 @@ for fitur in geo_data['features']:
 df = pd.DataFrame(records)
 
 # Title Aplikasi
-st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
+st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
 # 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
