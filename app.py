@@ -9,7 +9,7 @@ import pandas as pd
 st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
 # ==========================================
-# 1. MEMBUAT PANEL SAKPING (SIDEBAR)
+# 1. MEMBUAT PANEL SAMPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
@@ -29,7 +29,7 @@ with st.sidebar:
     st.write("📌 **Panduan Penggunaan:**")
     st.caption("1. Gunakan panel filter di bawah peta untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
-    st.caption("3. Peta, Metrik Utama, Grafik, dan Tabel di bawah akan berubah otomatis secara bersamaan.")
+    st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik di bawah akan berubah otomatis secara bersamaan.")
     st.caption("4. Arahkan kursor (*hover*) pada wilayah desa di peta untuk melihat detail data demografi.")
     
     st.markdown("---")
@@ -263,12 +263,12 @@ m2.metric("👥 Total Penduduk", f"{total_penduduk:,} Jiwa")
 m3.metric("👨 Laki-laki", f"{total_laki:,} Jiwa")
 m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
 
-# --- POSISI 3: VISUALISASI GRAFIK BATANG ---
+# --- POSISI 3: FITUR KEMBALI - TABEL DI ATAS GRAFIK ---
+st.markdown("### 📋 Detail Data Tabular")
+st.dataframe(df_filter, use_container_width=True, hide_index=True)
+
+# --- POSISI 4: VISUALISASI GRAFIK BATANG ---
 st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
 
 if not df_filter.empty:
     chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
-    st.bar_chart(chart_data, color=["#1f77b4", "#ff7f0e"], use_container_width=True)
-else:
-    st.info("💡 Tidak ada data desa yang terpilih untuk ditampilkan pada grafik.")
-
