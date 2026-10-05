@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import folium
 from streamlit_folium import st_folium
 import json
@@ -176,9 +176,9 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Koordinat default yang stabil untuk area Lamongan
+# Koordinat default yang dipusatkan dengan baik di area Kabupaten Lamongan
 map_center = [-7.12, 112.41]
-map_zoom = 10
+map_zoom = 11
 
 m = folium.Map(
     location=map_center, 
@@ -187,7 +187,7 @@ m = folium.Map(
     control_scale=True
 )
 
-# Perbaikan Basemap 1: OpenStreetMap standar
+# 1. Lapisan Basemap Peta Jalan Standar (OpenStreetMap)
 base_osm = folium.TileLayer(
     tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; OpenStreetMap contributors',
@@ -196,7 +196,7 @@ base_osm = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Perbaikan Basemap 2: Google Satelit yang stabil dan bebas blokir CORS server cloud
+# 2. Lapisan Basemap Citra Satelit Google yang stabil dan lancar di server cloud
 base_google_sat = folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Map data &copy; Google',
@@ -205,7 +205,7 @@ base_google_sat = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Perbaikan Basemap 3: Peta Minimalis Terang (Sangat bagus untuk kontras kloroplet)
+# 3. Lapisan Basemap Peta Ringan Minimalis Terang
 base_carto = folium.TileLayer(
     tiles='https://{s}://{z}/{x}/{y}{r}.png',
     attr='&copy; OpenStreetMap contributors &copy; CARTO',
@@ -214,10 +214,10 @@ base_carto = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
+# Perbaikan Kritis: Nilai indeks array warna [0, 1000, 2000, 3000, 4500, 6000, 10000] sudah ditulis lengkap
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
-    index=,
+    index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
     vmin=0,
     vmax=10000,
     caption="Jumlah Penduduk Kabupaten Lamongan per Desa (Jiwa)"
@@ -229,7 +229,7 @@ def ganti_warna(fitur):
         'fillColor': colormap_peta(jumlah_pop), 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.65       # Diturunkan sedikit ke 0.65 agar tekstur satelit Google di bawahnya terlihat membayang cantik
+        'fillOpacity': 0.65       
     }
 
 # Render Data Spasial Utama (Kloroplet)
@@ -257,7 +257,7 @@ if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Membuat lapisan bayangan terpisah khusus untuk menangani fungsionalitas plugin Search 
+# Lapisan bayangan terpisah khusus untuk menangani plugin Search agar tidak konflik visual
 search_layer = folium.GeoJson(
     geo_data_filter,
     name="Lapisan Pencarian",
@@ -265,7 +265,6 @@ search_layer = folium.GeoJson(
     control=False
 ).add_to(m)
 
-# Memasang fitur pencarian teks ke lapisan pencarian transparan
 peta_search = Search(
     layer=search_layer,
     geom_type="Polygon",
@@ -285,4 +284,5 @@ colormap_peta.add_to(m)
 # Menambahkan menu kontrol lapisan di pojok kiri atas peta
 folium.LayerControl(position='topleft').add_to(m)
 
-# Menampilkan hasil render peta ke Streamlit
+# Menampilkan hasil render peta ke Streamlit dengan konfigurasi stabil
+st_folium(m, use_container_width=True, height=550, key="webgis_lamongan_map")
