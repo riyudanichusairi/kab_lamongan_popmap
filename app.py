@@ -79,7 +79,7 @@ with filter_container:
     st.markdown("### 🔍 Penyaringan Data Dashboard")
     
     kecamatan_terpilih = st.selectbox(
-        "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
+        "📍 **Langkah 1: Filter Berdasarkan Kecamatan :**",
         options=["-- Semua Kecamatan --"] + daftar_kecamatan,
         key="kecamatan_box"
     )
