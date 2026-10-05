@@ -31,7 +31,7 @@ with st.sidebar:
     st.caption("1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
     st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik akan berubah otomatis secara bersamaan.")
-    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap serta link Google Maps.")
+    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -49,19 +49,9 @@ except FileNotFoundError:
 records = []
 for fitur in geo_data['features']:
     props = fitur['properties']
-    nama_des = props.get('KEL_DES', 'Tidak Diketahui')
-    nama_kec = props.get('KEC', 'Tidak Diketahui')
-    
-    # GENERASI LINK GOOGLE MAPS PADA POP-UP PETA
-    query_pencarian = f"Desa {nama_des}, Kecamatan {nama_kec}, Kabupaten Lamongan"
-    link_gmaps = f"https://google.com{query_pencarian.replace(' ', '+')}"
-    
-    # Menyisipkan tag HTML Link ke dalam properti GeoJSON
-    fitur['properties']['gmaps_link'] = f'<a href="{link_gmaps}" target="_blank" style="color: #007bff; text-decoration: underline; font-weight: bold;">🌐 Buka di Google Maps</a>'
-
     records.append({
-        'Kecamatan': nama_kec,
-        'Desa': nama_des,
+        'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
+        'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
         'Jumlah Penduduk': props.get('jumlah_penduduk', 0),
         'Laki-laki': props.get('laki_laki', 0),
         'Perempuan': props.get('perempuan', 0)
@@ -149,18 +139,6 @@ with st.sidebar:
         file_name=f"data_penduduk_lamongan_{label_status.replace(' ', '_')}.csv",
         mime="text/csv"
     )
-    
-    # TOMBOL NAVIGASI GOOGLE MAPS PADA SIDEBAR
-    if desa_terpilih:
-        st.markdown("---")
-        st.write("🗺️ **Rute Google Maps Desa Terpilih:**")
-        for des in desa_terpilih:
-            match_row = df[df['Desa'] == des]
-            if not match_row.empty:
-                kec_asal = match_row['Kecamatan'].values[0]
-                q_sidebar = f"Desa {des}, Kecamatan {kec_asal}, Kabupaten Lamongan"
-                url_sidebar = f"https://google.com{q_sidebar.replace(' ', '+')}"
-                st.link_button(f"🚗 Navigasi Ke {des}", url_sidebar, use_container_width=True)
 
 # ==========================================
 # 5. MENAMPILKAN ELEMEN VISUAL 
@@ -215,7 +193,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python (SUDAH DIPERBAIKI DENGAN INDEKS VALID)
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -241,7 +219,7 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Logika pembatasan tampilan area otomatis pada peta
+# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
@@ -261,12 +239,24 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# FITUR POP-UP DEMOGRAFI DENGAN INTEGRASI GOOGLE MAPS
+# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
 folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan", "gmaps_link"],
-    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:", "Tautan Luar:"],
+    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
     labels=True,
-    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 250px;"
+    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
 ).add_to(choro_layer)
 
 # Fitur Tooltip layang saat kursor melewati wilayah desa
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=["Desa: "],
+    labels=False,
+    sticky=True
+).add_to(choro_layer)
+
+# Menambahkan legenda Branca ke dalam peta
+colormap_peta.add_to(m)
+
+# Menampilkan hasil render peta ke Streamlit
+st_folium(m, width='100%', height=550, returned_objects=[])
