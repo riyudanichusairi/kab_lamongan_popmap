@@ -31,7 +31,7 @@ with st.sidebar:
     st.caption("1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
     st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik akan berubah otomatis secara bersamaan.")
-    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, and **klik** wilayah desa untuk melihat tabel demografi lengkap.")
+    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -176,9 +176,9 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Koordinat dipusatkan dan tingkat perbesaran dinaikkan agar fokus ke wilayah Lamongan saat pertama kali dibuka
-map_center = [-7.14, 112.33]
-map_zoom = 10
+# Koordinat default yang stabil untuk area Lamongan
+map_center = [-7.12, 112.41]
+map_zoom = 11
 
 m = folium.Map(
     location=map_center, 
@@ -187,8 +187,8 @@ m = folium.Map(
     control_scale=True
 )
 
-# Integrasi 1: Lapisan Basemap Peta Jalan Standar (OpenStreetMap)
-folium.TileLayer(
+# Menambahkan Basemap Peta Jalan Standar (OpenStreetMap)
+base_osm = folium.TileLayer(
     tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; OpenStreetMap contributors',
     name='Peta Jalan (OpenStreetMap)',
@@ -196,25 +196,16 @@ folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Integrasi 2: Lapisan Basemap Citra Satelit Open-Source Esri World Imagery
-folium.TileLayer(
+# Menambahkan Basemap Citra Satelit Esri
+base_esri = folium.TileLayer(
     tiles='https://arcgisonline.com{z}/{y}/{x}',
-    attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    attr='Tiles &copy; Esri &mdash; Source: Esri',
     name='Citra Satelit (Esri World Imagery)',
     overlay=False,
     control=True
 ).add_to(m)
 
-# Integrasi 3: Lapisan Basemap Citra Satelit Alternatif Google Satellite
-folium.TileLayer(
-    tiles='https://google.com{x}&y={y}&z={z}',
-    attr='Map data &copy; Google',
-    name='Citra Satelit (Google Satellite)',
-    overlay=False,
-    control=True
-).add_to(m)
-
-# Perbaikan di bagian ini: Menambahkan indeks angka rentang populasi secara lengkap
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -232,12 +223,23 @@ def ganti_warna(fitur):
         'fillOpacity': 0.70       
     }
 
+# Render Data Spasial Utama (Kloroplet)
 choro_layer = folium.GeoJson(
     geo_data_filter,
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
-    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
+    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9},
+    tooltip=folium.GeoJsonTooltip(
+        fields=["KEL_DES", "jumlah_penduduk"],
+        aliases=["Desa: ", "Penduduk: "],
+        sticky=True
+    ),
+    popup=folium.GeoJsonPopup(
+        fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+        aliases=["Kecamatan:", "Desa/Kelurahan:", "Total Penduduk:", "Laki-laki:", "Perempuan:"],
+        labels=True
+    )
 ).add_to(m)
 
 # Logika otomatis auto-zoom peta ke area terfilter (Hanya berjalan jika filter diisi)
@@ -246,9 +248,17 @@ if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Fitur pencarian teks langsung di dalam peta
+# Solusi Fix Blank: Membuat lapisan bayangan terpisah khusus untuk menangani fungsionalitas plugin Search 
+search_layer = folium.GeoJson(
+    geo_data_filter,
+    name="Lapisan Pencarian",
+    style_function=lambda x: {'fillOpacity': 0, 'weight': 0}, # Dibuat transparan agar tidak merusak visual kloroplet
+    control=False
+).add_to(m)
+
+# Memasang fitur pencarian teks ke lapisan pencarian transparan
 peta_search = Search(
-    layer=choro_layer,
+    layer=search_layer,
     geom_type="Polygon",
     placeholder="Cari nama desa/kelurahan...",
     collapsed=False,
@@ -260,23 +270,11 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
-folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
-    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
-    labels=True,
-    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
-).add_to(choro_layer)
-
-# Fitur Tooltip layang saat kursor melewati wilayah desa
-folium.features.GeoJsonTooltip(
-    fields=["KEL_DES"],
-    aliases=["Desa: "],
-    labels=False,
-    sticky=True
-).add_to(choro_layer)
-
 # Menambahkan legenda Branca ke dalam peta
 colormap_peta.add_to(m)
 
-# Menambahkan menu kontrol lapisan di pojok kiri atas peta agar user bisa memilih basemap secara interaktif
+# Menambahkan menu kontrol lapisan di pojok kiri atas peta
+folium.LayerControl(position='topleft').add_to(m)
+
+# Menampilkan hasil render peta ke Streamlit (menggunakan konfigurasi rilis yang stabil)
+st_folium(m, use_container_width=True, height=550, key="webgis_lamongan_map")
