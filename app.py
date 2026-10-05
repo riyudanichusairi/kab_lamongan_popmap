@@ -176,7 +176,7 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Koordinat default yang dipusatkan dengan baik di area Kabupaten Lamongan
+# Koordinat default Kabupaten Lamongan
 map_center = [-7.12, 112.41]
 map_zoom = 11
 
@@ -187,16 +187,7 @@ m = folium.Map(
     control_scale=True
 )
 
-# 1. Lapisan Basemap Peta Jalan Standar (OpenStreetMap)
-base_osm = folium.TileLayer(
-    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attr='&copy; OpenStreetMap contributors',
-    name='Peta Jalan (OpenStreetMap)',
-    overlay=False,
-    control=True
-).add_to(m)
-
-# 2. Lapisan Basemap Citra Satelit Google yang stabil dan lancar di server cloud
+# Solusi Optimalisasi Basemap: Jadikan Google Satellite sebagai pilihan basemap utama teratas agar langsung termuat otomatis
 base_google_sat = folium.TileLayer(
     tiles='https://google.com{x}&y={y}&z={z}',
     attr='Map data &copy; Google',
@@ -205,7 +196,14 @@ base_google_sat = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# 3. Lapisan Basemap Peta Ringan Minimalis Terang
+base_osm = folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr='&copy; OpenStreetMap contributors',
+    name='Peta Jalan (OpenStreetMap)',
+    overlay=False,
+    control=True
+).add_to(m)
+
 base_carto = folium.TileLayer(
     tiles='https://{s}://{z}/{x}/{y}{r}.png',
     attr='&copy; OpenStreetMap contributors &copy; CARTO',
@@ -227,9 +225,9 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     return {
         'fillColor': colormap_peta(jumlah_pop), 
-        'color': '#666666',      
-        'weight': 0.5,           
-        'fillOpacity': 0.65       
+        'color': '#333333',      
+        'weight': 0.7,           
+        'fillOpacity': 0.45       # Solusi Kritis: Diturunkan ke 0.45 agar rona satelit bumi di bawahnya tembus pandang dengan cantik
     }
 
 # Render Data Spasial Utama (Kloroplet)
@@ -238,7 +236,7 @@ choro_layer = folium.GeoJson(
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
-    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9},
+    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.8},
     tooltip=folium.GeoJsonTooltip(
         fields=["KEL_DES", "jumlah_penduduk"],
         aliases=["Desa: ", "Penduduk: "],
@@ -257,7 +255,7 @@ if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Lapisan bayangan terpisah khusus untuk menangani plugin Search agar tidak konflik visual
+# Lapisan bayangan terpisah untuk plugin Search
 search_layer = folium.GeoJson(
     geo_data_filter,
     name="Lapisan Pencarian",
