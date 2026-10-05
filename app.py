@@ -182,23 +182,14 @@ map_zoom = 11
 m = folium.Map(
     location=map_center, 
     zoom_start=map_zoom, 
-    tiles=None,              
+    tiles="CartoDB positron",  # Menggunakan tileset default terenkripsi aman anti-blank cloud
     control_scale=True
 )
 
-# FIXED PATCH: Menggunakan URL subdomain satelit aman khusus cloud yang bypass CORS keamanan Streamlit
+# Menambahkan opsi peta alternatif yang diizinkan oleh sistem cloud
 folium.TileLayer(
-    tiles='https://arcgisonline.com{z}/{y}/{x}',
-    attr='Esri World Imagery',
-    name='Citra Satelit (Satelit Bumi)',
-    overlay=False,
-    control=True
-).add_to(m)
-
-folium.TileLayer(
-    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attr='OpenStreetMap',
-    name='Peta Jalan (OpenStreetMap)',
+    tiles="CartoDB voyager",
+    name="Peta Jalan Berwarna (CartoDB)",
     overlay=False,
     control=True
 ).add_to(m)
@@ -216,9 +207,9 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     return {
         'fillColor': colormap_peta(jumlah_pop), 
-        'color': '#222222',      
-        'weight': 0.8,           
-        'fillOpacity': 0.40       # Nilai 0.40 memastikan daratan rumah/tanah di bawah satelit tembus pandang jelas
+        'color': '#555555',      
+        'weight': 0.6,           
+        'fillOpacity': 0.60       
     }
 
 # Render Data Spasial Utama (Kloroplet)
@@ -227,6 +218,7 @@ choro_layer = folium.GeoJson(
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
+    overlay=True,
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.8},
     tooltip=folium.GeoJsonTooltip(
         fields=["KEL_DES", "jumlah_penduduk"],
@@ -240,11 +232,13 @@ choro_layer = folium.GeoJson(
     )
 ).add_to(m)
 
+# Logika otomatis auto-zoom peta ke area terfilter (Hanya berjalan jika filter diisi)
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
+# Lapisan bayangan terpisah khusus pencarian teks
 search_layer = folium.GeoJson(
     geo_data_filter,
     name="Lapisan Pencarian",
@@ -265,8 +259,9 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
+# Menambahkan elemen dekoratif kontrol ke peta
 colormap_peta.add_to(m)
 folium.LayerControl(position='topleft').add_to(m)
 
-# Render menggunakan Iframe isolasi penuh agar tidak merusak kanvas web asli
+# Eksekusi tampilan peta akhir ke Streamlit
 st_folium(m, use_container_width=True, height=550, key="webgis_lamongan_map")
