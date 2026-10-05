@@ -192,11 +192,35 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# FUNGSI DYNAMIC AUTO-ZOOM PETA
+# FUNGSI DYNAMIC AUTO-ZOOM PETA (Menggunakan ekstraksi koordinat manual agar lebih aman dari error)
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
-        bounds = choro_layer.get_bounds()
-        m.fit_bounds(bounds) 
+        try:
+            # Ambil semua koordinat dari fitur yang terfilter
+            koordinat_list = []
+            for f in geo_data_filter['features']:
+                geom_type = f['geometry']['type']
+                coords = f['geometry']['coordinates']
+                
+                # Handling struktur Polygon vs MultiPolygon
+                if geom_type == "Polygon":
+                    for ring in coords:
+                        for p in ring:
+                            koordinat_list.append([p[1], p[0]]) # Folium butuh [Lat, Lon]
+                elif geom_type == "MultiPolygon":
+                    for poly in coords:
+                        for ring in poly:
+                            for p in ring:
+                                koordinat_list.append([p[1], p[0]])
+            
+            if koordinat_list:
+                df_coords = pd.DataFrame(koordinat_list, columns=['lat', 'lon'])
+                min_lat, max_lat = df_coords['lat'].min(), df_coords['lat'].max()
+                min_lon, max_lon = df_coords['lon'].min(), df_coords['lon'].max()
+                m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+        except Exception as e:
+            # Fallback jika terjadi kesalahan pembacaan struktur koordinat
+            pass
 
 peta_search = Search(
     layer=choro_layer,
@@ -219,6 +243,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
+# --- PERBAIKAN: Melengkapi Legenda HTML yang terpotong ---
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -244,11 +269,3 @@ legenda_html = '''
         <span style="display: flex; align-items: center;"><i style="background:#7fcdbb; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 1.001 - 2.000</span>
         <span style="display: flex; align-items: center;"><i style="background:#41b6c4; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 2.001 - 3.000</span>
         <span style="display: flex; align-items: center;"><i style="background:#1d91c0; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 3.001 - 4.500</span>
-        <span style="display: flex; align-items: center;"><i style="background:#253494; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 4.501 - 6.000</span>
-        <span style="display: flex; align-items: center;"><i style="background:#081d58; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> &gt; 6.000</span>
-    </div>
-</div>
-'''
-m.get_root().html.add_child(folium.Element(legenda_html))
-
-st_folium(m, width="100%", height=500, returned_objects=[])
