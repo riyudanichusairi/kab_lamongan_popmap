@@ -17,9 +17,10 @@ with st.sidebar:
     with col_center:
         st.write("") 
         try:
-            st.image("logo_lamongan.png", use_container_width=True)
-        except:
-            st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
+            # Menggunakan logo_path yang jalurnya sudah pasti aman
+            st.image(logo_path, use_container_width=True)
+        except Exception as e:
+            st.warning(f"⚠️ Logo tidak ditemukan. Eror: {e}")
     
     st.title("WebGIS Lamongan")
     st.write(
