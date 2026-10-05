@@ -4,6 +4,7 @@ from streamlit_folium import st_folium
 import json
 from folium.plugins import Search
 import pandas as pd
+import branca.colormap as cm
 
 # Konfigurasi halaman penuh (wide mode)
 st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
@@ -123,7 +124,7 @@ else:
     geo_data_filter = geo_data
     label_status = "Total Lamongan"
 
-# [PASTIKAN PENGHITUNGAN INI ADA SEBELUM ELEMEN VISUAL DIRENDER]
+# Penghitungan metrik
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
@@ -140,7 +141,7 @@ with st.sidebar:
     )
 
 # ==========================================
-# 5. MENAMPILKAN ELEMEN VISUAL (TATA LETAK BARU)
+# 5. MENAMPILKAN ELEMEN VISUAL
 # ==========================================
 
 # --- POSISI 1: KARTU METRIK DI ATAS ---
@@ -153,7 +154,7 @@ m4.metric("Jumlah Wilayah (Desa)", f"{total_desa} Wilayah")
 
 st.markdown("---")
 
-# --- POSISI 2: TABEL & GRAFIK (DI ATAS PETA) ---
+# --- POSISI 2: TABEL & GRAFIK (DI TENGAH) ---
 st.markdown("### 📈 Analisis dan Detail Data Terfilter")
 col_tabel, col_grafik = st.columns(2)
 
@@ -191,23 +192,19 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
+# Membuat Legenda Resmi Menggunakan Pustaka Branca Python (Aman dari Tanda Petik)
+colormap_peta = cm.StepColormap(
+    colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
+    index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
+    vmin=0,
+    vmax=10000,
+    caption="Jumlah Penduduk Kabupaten Lamongan per Desa (Jiwa)"
+)
+
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    if jumlah_pop > 6000:
-        warna = '#081d58'
-    elif jumlah_pop > 4500:
-        warna = '#253494'
-    elif jumlah_pop > 3000:
-        warna = '#1d91c0'
-    elif jumlah_pop > 2000:
-        warna = '#41b6c4'
-    elif jumlah_pop > 1000:
-        warna = '#7fcdbb'
-    else:
-        warna = '#ffffcc'
-            
     return {
-        'fillColor': warna, 
+        'fillColor': colormap_peta(jumlah_pop), 
         'color': '#666666',      
         'weight': 0.5,           
         'fillOpacity': 0.75       
@@ -247,29 +244,8 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-legenda_html = '''
-<div style="
-    position: fixed; 
-    bottom: 25px; 
-    left: 50%; 
-    transform: translateX(-50%);
-    width: 750px; 
-    height: 45px; 
-    border: 2px solid #666666; 
-    z-index: 9999; 
-    font-size: 11px;
-    background-color: #ffffff;
-    color: #000000;
-    padding: 8px 15px;
-    font-family: sans-serif;
-    border-radius: 6px;
-    box-shadow: 3px 3px 6px rgba(0,0,0,0.3);
-    text-align: center;
-    ">
-    <b style="display: block; margin-bottom: 6px;">Legenda Jumlah Penduduk Kabupaten Lamongan (Jiwa)</b>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="display: flex; align-items: center;"><i style="background:#ffffcc; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> &le; 1.000</span>
-        <span style="display: flex; align-items: center;"><i style="background:#7fcdbb; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 1.001 - 2.000</span>
-        <span style="display: flex; align-items: center;"><i style="background:#41b6c4; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 2.001 - 3.000</span>
-        <span style="display: flex; align-items: center;"><i style="background:#1d91c0; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 3.001 - 4.500</span>
-        <span style="display: flex; align-items: center;"><i style="background:#253494; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;"></i> 4.501 - 6.000</span>
+# Menambahkan legenda Branca ke dalam objek Peta
+colormap_peta.add_to(m)
+
+# Menampilkan peta ke halaman Streamlit
+st_folium(m, width='100%', height=550, returned_objects=[])
