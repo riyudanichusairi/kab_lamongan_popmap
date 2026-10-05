@@ -58,7 +58,7 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Title Utama Aplikasi
+# Title Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
@@ -176,25 +176,24 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-map_center = [-7.12, 112.41]
-map_zoom = 11
+# Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
+map_center = [-7.14, 112.33]
+map_zoom = 10
 
 m = folium.Map(
     location=map_center, 
     zoom_start=map_zoom, 
-    tiles="CartoDB positron",  # Menggunakan tileset default terenkripsi aman anti-blank cloud
+    tiles=None,
     control_scale=True
 )
 
-# Menambahkan opsi peta alternatif yang diizinkan oleh sistem cloud
 folium.TileLayer(
-    tiles="CartoDB voyager",
-    name="Peta Jalan Berwarna (CartoDB)",
-    overlay=False,
-    control=True
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr='&copy; OpenStreetMap contributors',
+    name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Skema klasifikasi rentang warna kloroplet
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -207,47 +206,28 @@ def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
     return {
         'fillColor': colormap_peta(jumlah_pop), 
-        'color': '#555555',      
-        'weight': 0.6,           
-        'fillOpacity': 0.60       
+        'color': '#666666',      
+        'weight': 0.5,           
+        'fillOpacity': 0.75       
     }
 
-# Render Data Spasial Utama (Kloroplet)
 choro_layer = folium.GeoJson(
     geo_data_filter,
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
-    overlay=True,
-    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.8},
-    tooltip=folium.GeoJsonTooltip(
-        fields=["KEL_DES", "jumlah_penduduk"],
-        aliases=["Desa: ", "Penduduk: "],
-        sticky=True
-    ),
-    popup=folium.GeoJsonPopup(
-        fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
-        aliases=["Kecamatan:", "Desa/Kelurahan:", "Total Penduduk:", "Laki-laki:", "Perempuan:"],
-        labels=True
-    )
+    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Logika otomatis auto-zoom peta ke area terfilter (Hanya berjalan jika filter diisi)
+# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Lapisan bayangan terpisah khusus pencarian teks
-search_layer = folium.GeoJson(
-    geo_data_filter,
-    name="Lapisan Pencarian",
-    style_function=lambda x: {'fillOpacity': 0, 'weight': 0}, 
-    control=False
-).add_to(m)
-
+# Fitur pencarian teks langsung di dalam peta
 peta_search = Search(
-    layer=search_layer,
+    layer=choro_layer,
     geom_type="Polygon",
     placeholder="Cari nama desa/kelurahan...",
     collapsed=False,
@@ -259,9 +239,24 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# Menambahkan elemen dekoratif kontrol ke peta
-colormap_peta.add_to(m)
-folium.LayerControl(position='topleft').add_to(m)
+# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
+folium.features.GeoJsonPopup(
+    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
+    labels=True,
+    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
+).add_to(choro_layer)
 
-# Eksekusi tampilan peta akhir ke Streamlit
-st_folium(m, use_container_width=True, height=550, key="webgis_lamongan_map")
+# Fitur Tooltip layang saat kursor melewati wilayah desa
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=["Desa: "],
+    labels=False,
+    sticky=True
+).add_to(choro_layer)
+
+# Menambahkan legenda Branca ke dalam peta
+colormap_peta.add_to(m)
+
+# Menampilkan hasil render peta ke Streamlit
+st_folium(m, width='100%', height=550, returned_objects=[])
