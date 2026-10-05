@@ -27,8 +27,8 @@ with st.sidebar:
     )
     st.markdown("---")
     st.write("📌 **Panduan Penggunaan:**")
-    st.caption("1. Gulir ke bawah untuk memfilter data berdasarkan 'Kecamatan' atau 'Desa'.")
-    st.caption("2. Peta, Metrik Utama, dan Tabel di bawah akan berubah otomatis secara bersamaan.")
+    st.caption("1. Gunakan panel filter di bawah peta untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
+    st.caption("2. Peta, Metrik Utama, Grafik, dan Tabel di bawah akan berubah otomatis secara bersamaan.")
     st.caption("3. Gunakan kolom pencarian di kanan atas peta jika ingin melacak lokasi desa secara instan.")
     st.caption("4. Arahkan kursor (*hover*) pada wilayah desa di peta untuk melihat detail data demografi.")
     
@@ -61,21 +61,18 @@ df = pd.DataFrame(records)
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
 # ==========================================
-# 3. WIDGET FILTER (DITARIK KE ATAS SECARA LOGIKA)
+# 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
 # ==========================================
-# Menggunakan st.container untuk menentukan posisi visual komponen filter agar tetap berada di bawah peta nanti
 filter_container = st.container()
 
 daftar_kecamatan = sorted(df['Kecamatan'].unique())
 
-# Membaca input filter dari container terbawah (menggunakan trik alokasi variabel dahulu)
 if 'kec_key' not in st.session_state:
     st.session_state.kec_key = "-- Semua Kecamatan --"
 
 # ==========================================
-# 4. LOGIKA FILTERING DATA UNTUK SEMUA ELEMEN (PETA, METRIK, TABEL)
+# 4. LOGIKA FILTERING DATA UNTUK SEMUA ELEMEN
 # ==========================================
-# Skrip ini membaca state widget yang diletakkan di bawah menggunakan container
 with filter_container:
     st.markdown("---")
     st.markdown("### 🔍 Penyaringan Data Dashboard")
@@ -187,7 +184,6 @@ def ganti_warna(fitur):
         'fillOpacity': 0.75       
     }
 
-# GeoJson memuat data 'geo_data_filter' yang sudah sinkron dengan widget
 choro_layer = folium.GeoJson(
     geo_data_filter,
     name="Kloroplet Penduduk Lamongan",
@@ -224,7 +220,7 @@ legenda_html = '''
     left: 50%; 
     transform: translateX(-50%);
     width: 750px; 
-    height: 65px; 
+    height: 45px; 
     border: 2px solid #666666; 
     z-index: 9999; 
     font-size: 11px;
@@ -247,23 +243,29 @@ legenda_html = '''
     </div>
 </div>
 '''
+folium.MacroElement().add_to(m)
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-st_folium(m, width="100%", height=550, returned_objects=[])
+# Render peta ke Streamlit
+st_folium(m, width="100%", height=500, returned_objects=[])
 
-# --- POSISI 2: RINGKASAN METRIK (TENGAH) ---
-st.markdown("---")
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric(f"Total Penduduk ({label_status})", f"{total_penduduk:,} Jiwa")
-with col2:
-    st.metric(f"Jumlah Laki-laki ({label_status})", f"{total_laki:,} Jiwa")
-with col3:
-    st.metric(f"Jumlah Perempuan ({label_status})", f"{total_perempuan:,} Jiwa")
-with col4:
-    st.metric(f"Jumlah Wilayah Terseleksi", f"{total_desa} Desa")
+# --- POSISI 2: RINGKASAN METRIK ---
+st.markdown(f"### 📈 Ringkasan Statistik Data ({label_status})")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("🏠 Total Wilayah Desa", f"{total_desa} Desa")
+m2.metric("👥 Total Penduduk", f"{total_penduduk:,} Jiwa")
+m3.metric("👨 Laki-laki", f"{total_laki:,} Jiwa")
+m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
 
-# --- POSISI 3: WIDGET FILTER (MUNCUL DI SINI SECARA VISUAL) ---
-# Di-render otomatis via objek filter_container di atas
+# --- POSISI 3: PERUBAHAN BARU - VISUALISASI GRAFIK BATANG ---
+st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
 
-# --- POSISI 4: TABEL DATA ATRIBUT (PALING BAWAH) ---
+if not df_filter.empty:
+    # Mempersiapkan dataframe khusus grafik (Desa sebagai indeks agar label sumbu X rapi)
+    chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
+    
+    # Menampilkan grafik batang bertumpuk berdampingan yang interaktif dan responsif
+    st.bar_chart(chart_data, color=["#1f77b4", "#ff7f0e"], use_container_width=True)
+else:
+    st.info("💡 Tidak ada data desa yang terpilih untuk ditampilkan pada grafik.")
+
