@@ -178,7 +178,7 @@ st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # Koordinat default yang stabil untuk area Lamongan
 map_center = [-7.12, 112.41]
-map_zoom = 11
+map_zoom = 10
 
 m = folium.Map(
     location=map_center, 
@@ -187,7 +187,7 @@ m = folium.Map(
     control_scale=True
 )
 
-# Menambahkan Basemap Peta Jalan Standar (OpenStreetMap)
+# Perbaikan Basemap 1: OpenStreetMap standar
 base_osm = folium.TileLayer(
     tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; OpenStreetMap contributors',
@@ -196,11 +196,20 @@ base_osm = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Menambahkan Basemap Citra Satelit Esri
-base_esri = folium.TileLayer(
-    tiles='https://arcgisonline.com{z}/{y}/{x}',
-    attr='Tiles &copy; Esri &mdash; Source: Esri',
-    name='Citra Satelit (Esri World Imagery)',
+# Perbaikan Basemap 2: Google Satelit yang stabil dan bebas blokir CORS server cloud
+base_google_sat = folium.TileLayer(
+    tiles='https://google.com{x}&y={y}&z={z}',
+    attr='Map data &copy; Google',
+    name='Citra Satelit (Google Satellite)',
+    overlay=False,
+    control=True
+).add_to(m)
+
+# Perbaikan Basemap 3: Peta Minimalis Terang (Sangat bagus untuk kontras kloroplet)
+base_carto = folium.TileLayer(
+    tiles='https://{s}://{z}/{x}/{y}{r}.png',
+    attr='&copy; OpenStreetMap contributors &copy; CARTO',
+    name='Peta Ringan (CartoDB Light)',
     overlay=False,
     control=True
 ).add_to(m)
@@ -208,7 +217,7 @@ base_esri = folium.TileLayer(
 # Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
-    index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
+    index=,
     vmin=0,
     vmax=10000,
     caption="Jumlah Penduduk Kabupaten Lamongan per Desa (Jiwa)"
@@ -220,7 +229,7 @@ def ganti_warna(fitur):
         'fillColor': colormap_peta(jumlah_pop), 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.70       
+        'fillOpacity': 0.65       # Diturunkan sedikit ke 0.65 agar tekstur satelit Google di bawahnya terlihat membayang cantik
     }
 
 # Render Data Spasial Utama (Kloroplet)
@@ -248,11 +257,11 @@ if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Solusi Fix Blank: Membuat lapisan bayangan terpisah khusus untuk menangani fungsionalitas plugin Search 
+# Membuat lapisan bayangan terpisah khusus untuk menangani fungsionalitas plugin Search 
 search_layer = folium.GeoJson(
     geo_data_filter,
     name="Lapisan Pencarian",
-    style_function=lambda x: {'fillOpacity': 0, 'weight': 0}, # Dibuat transparan agar tidak merusak visual kloroplet
+    style_function=lambda x: {'fillOpacity': 0, 'weight': 0}, 
     control=False
 ).add_to(m)
 
@@ -276,5 +285,4 @@ colormap_peta.add_to(m)
 # Menambahkan menu kontrol lapisan di pojok kiri atas peta
 folium.LayerControl(position='topleft').add_to(m)
 
-# Menampilkan hasil render peta ke Streamlit (menggunakan konfigurasi rilis yang stabil)
-st_folium(m, use_container_width=True, height=550, key="webgis_lamongan_map")
+# Menampilkan hasil render peta ke Streamlit
