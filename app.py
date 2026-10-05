@@ -176,8 +176,9 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-map_center = [-7.12, 112.41]
-map_zoom = 11
+# Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
+map_center = [-7.14, 112.33]
+map_zoom = 12
 
 m = folium.Map(
     location=map_center, 
@@ -218,8 +219,8 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Logika otomatis auto-zoom peta ke area terfilter
-if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
+# Logika otomatis auto-zoom peta ke area terfilter (hanya aktif jika user memilih filter)
+if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilled:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
