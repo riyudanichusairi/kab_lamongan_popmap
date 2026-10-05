@@ -19,7 +19,7 @@ with st.sidebar:
             st.image("logo_lamongan.png", use_container_width=True)
         except:
             st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
-    
+            
     st.title("WebGIS Lamongan")
     st.write(
         "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
@@ -31,7 +31,6 @@ with st.sidebar:
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
     st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik di bawah akan berubah otomatis secara bersamaan.")
     st.caption("4. Arahkan kursor (*hover*) pada wilayah desa di peta untuk melihat detail data demografi.")
-    
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
 
@@ -64,7 +63,6 @@ st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 # 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
 # ==========================================
 filter_container = st.container()
-
 daftar_kecamatan = sorted(df['Kecamatan'].unique())
 
 if 'kec_key' not in st.session_state:
@@ -76,7 +74,6 @@ if 'kec_key' not in st.session_state:
 with filter_container:
     st.markdown("---")
     st.markdown("### 🔍 Penyaringan Data Dashboard")
-    
     kecamatan_terpilih = st.selectbox(
         "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
         options=["-- Semua Kecamatan --"] + daftar_kecamatan,
@@ -103,21 +100,17 @@ if desa_terpilih:
     df_filter = df[df['Desa'].isin(desa_terpilih)]
     geo_data_filter = geo_data.copy()
     geo_data_filter['features'] = [
-        f for f in geo_data['features'] 
-        if f['properties'].get('KEL_DES') in desa_terpilih
+        f for f in geo_data['features'] if f['properties'].get('KEL_DES') in desa_terpilih
     ]
     label_status = "Hasil Seleksi Desa"
-
 elif kecamatan_terpilih != "-- Semua Kecamatan --":
     df_filter = df_kec
     list_desa_kec = df_kec['Desa'].tolist()
     geo_data_filter = geo_data.copy()
     geo_data_filter['features'] = [
-        f for f in geo_data['features'] 
-        if f['properties'].get('KEL_DES') in list_desa_kec
+        f for f in geo_data['features'] if f['properties'].get('KEL_DES') in list_desa_kec
     ]
     label_status = f"Kec. {kecamatan_terpilih}"
-
 else:
     df_filter = df
     geo_data_filter = geo_data
@@ -149,12 +142,7 @@ st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 map_center = [-7.12, 112.41]
 map_zoom = 11
 
-m = folium.Map(
-    location=map_center, 
-    zoom_start=map_zoom, 
-    tiles=None,
-    control_scale=True
-)
+m = folium.Map(location=map_center, zoom_start=map_zoom, tiles=None, control_scale=True)
 
 folium.TileLayer(
     tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -176,12 +164,11 @@ def ganti_warna(fitur):
         warna = '#7fcdbb'
     else:
         warna = '#ffffcc'
-            
     return {
-        'fillColor': warna, 
-        'color': '#666666',      
-        'weight': 0.5,           
-        'fillOpacity': 0.75       
+        'fillColor': warna,
+        'color': '#666666',
+        'weight': 0.5,
+        'fillOpacity': 0.75
     }
 
 choro_layer = folium.GeoJson(
@@ -192,31 +179,29 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# FUNGSI DYNAMIC AUTO-ZOOM PETA
+# FUNGSI DYNAMIC AUTO-ZOOM PETA YANG AMAN
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
-    if geo_data_filter['features']: 
+    if geo_data_filter['features']:
         try:
             koordinat_list = []
             for f in geo_data_filter['features']:
                 geom_type = f['geometry']['type']
                 coords = f['geometry']['coordinates']
-                
                 if geom_type == "Polygon":
                     for ring in coords:
                         for p in ring:
-                            koordinat_list.append([p, p])
+                            koordinat_list.append([p[1], p[0]])
                 elif geom_type == "MultiPolygon":
                     for poly in coords:
                         for ring in poly:
                             for p in ring:
-                                koordinat_list.append([p, p])
-            
+                                koordinat_list.append([p[1], p[0]])
             if koordinat_list:
                 df_coords = pd.DataFrame(koordinat_list, columns=['lat', 'lon'])
                 min_lat, max_lat = df_coords['lat'].min(), df_coords['lat'].max()
                 min_lon, max_lon = df_coords['lon'].min(), df_coords['lon'].max()
                 m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
-        except Exception as e:
+        except:
             pass
 
 peta_search = Search(
@@ -240,5 +225,8 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# MODIFIKASI: Menggunakan format string satu baris (\n) untuk menghindari galat tanda petik tiga
+# Legenda HTML menggunakan format string tunggal yang aman dari SyntaxError
 legenda_html = "<div style=\"position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 750px; height: 45px; border: 2px solid #666666; z-index: 9999; font-size: 11px; background-color: #ffffff; color: #000000; padding: 8px 15px; font-family: sans-serif; border-radius: 6px; box-shadow: 3px 3px 6px rgba(0,0,0,0.3); text-align: center;\"><b style=\"display: block; margin-bottom: 6px;\">Legenda Jumlah Penduduk Kabupaten Lamongan (Jiwa)</b><div style=\"display: flex; justify-content: space-between; align-items: center;\"><span style=\"display: flex; align-items: center;\"><i style=\"background:#ffffcc; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> &le; 1.000</span><span style=\"display: flex; align-items: center;\"><i style=\"background:#7fcdbb; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> 1.001 - 2.000</span><span style=\"display: flex; align-items: center;\"><i style=\"background:#41b6c4; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> 2.001 - 3.000</span><span style=\"display: flex; align-items: center;\"><i style=\"background:#1d91c0; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> 3.001 - 4.500</span><span style=\"display: flex; align-items: center;\"><i style=\"background:#253494; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> 4.501 - 6.000</span><span style=\"display: flex; align-items: center;\"><i style=\"background:#081d58; width:15px; height:15px; display:inline-block; margin-right:5px; border:1px solid #aaa;\"></i> &gt; 6.000</span></div></div>"
+m.get_root().html.add_child(folium.Element(legenda_html))
+
+# Render peta ke panel Streamlit
