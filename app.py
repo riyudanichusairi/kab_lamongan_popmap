@@ -28,11 +28,11 @@ with st.sidebar:
     )
     st.markdown("---")
     st.write("📌 **Panduan Penggunaan:**")
-    st.caption("1. Gunakan filter 'Kecamatan' di atas peta untuk mempersempit wilayah.")
-    st.caption("2. Gunakan filter 'Desa' untuk memilih atau mencentang beberapa desa tertentu saja.")
-    st.caption("3. Gunakan kolom pencarian di kanan atas peta jika ingin melacak lokasi desa secara instan.")
-    st.caption("4. Arahkan kursor (*hover*) atau klik pada wilayah desa di peta untuk melihat detail data demografi.")
-    st.caption("5. Lihat tabel di bawah peta untuk meninjau data tabular hasil penyaringan.")
+    st.caption("1. Arahkan kursor (*hover*) atau klik pada wilayah desa di peta untuk melihat detail data demografi.")
+    st.caption("2. Gunakan kolom pencarian di kanan atas peta jika ingin melacak lokasi desa secara instan.")
+    st.caption("3. Gulir ke bawah peta untuk melihat ringkasan metrik data total.")
+    st.caption("4. Gunakan filter 'Kecamatan' dan 'Desa' di bawah metrik untuk menyaring data tabular.")
+    st.caption("5. Lihat tabel di paling bawah untuk meninjau data hasil penyaringan.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -59,74 +59,17 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# ==========================================
-# 3. FITUR SELEKSI BERJENJANG (KECAMATAN & DESA)
-# ==========================================
-st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
-
+# Inisialisasi daftar kecamatan untuk filter nantinya
 daftar_kecamatan = sorted(df['Kecamatan'].unique())
 
-kecamatan_terpilih = st.selectbox(
-    "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
-    options=["-- Semua Kecamatan --"] + daftar_kecamatan
-)
-
-if kecamatan_terpilih != "-- Semua Kecamatan --":
-    df_kec = df[df['Kecamatan'] == kecamatan_terpilih]
-    daftar_desa = sorted(df_kec['Desa'].unique())
-else:
-    df_kec = df
-    daftar_desa = sorted(df['Desa'].unique())
-
-desa_terpilih = st.multiselect(
-    "🔍 **Langkah 2: Pilih / Centang Beberapa Desa yang Diinginkan:**",
-    options=daftar_desa,
-    placeholder="Ketik atau pilih nama beberapa desa..."
-)
+# ==========================================
+# 3. MEMBUAT STATE WIDGET (UNTUK FILTER DI BAWAH)
+# ==========================================
+# Deklarasi form/posisi filter di bawah agar nilai variabel dapat dibaca di logika atas
+st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
 # ==========================================
-# 4. LOGIKA FILTERING DATA UNTUK PETA & METRIK
-# ==========================================
-if desa_terpilih:
-    df_filter = df[df['Desa'].isin(desa_terpilih)]
-    geo_data_filter = geo_data.copy()
-    geo_data_filter['features'] = [
-        f for f in geo_data['features'] 
-        if f['properties'].get('KEL_DES') in desa_terpilih
-    ]
-    label_status = "Hasil Seleksi Desa"
-
-elif kecamatan_terpilih != "-- Semua Kecamatan --":
-    df_filter = df_kec
-    list_desa_kec = df_kec['Desa'].tolist()
-    geo_data_filter = geo_data.copy()
-    geo_data_filter['features'] = [
-        f for f in geo_data['features'] 
-        if f['properties'].get('KEL_DES') in list_desa_kec
-    ]
-    label_status = f"Kec. {kecamatan_terpilih}"
-
-else:
-    df_filter = df
-    geo_data_filter = geo_data
-    label_status = "Total Lamongan"
-
-total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
-total_laki = int(df_filter['Laki-laki'].sum())
-total_perempuan = int(df_filter['Perempuan'].sum())
-total_desa = int(df_filter['Desa'].nunique())
-
-csv_data = df_filter.to_csv(index=False).encode('utf-8')
-with st.sidebar:
-    st.download_button(
-        label="📥 Unduh Data Terfilter (CSV)",
-        data=csv_data,
-        file_name=f"data_penduduk_lamongan_{label_status.replace(' ', '_')}.csv",
-        mime="text/csv"
-    )
-
-# ==========================================
-# 5. MEMBANGUN & MENAMPILKAN PETA INTERAKTIF KLOROPLET
+# 4. MEMBANGUN & MENAMPILKAN PETA INTERAKTIF KLOROPLET
 # ==========================================
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
@@ -170,7 +113,7 @@ def ganti_warna(fitur):
     }
 
 choro_layer = folium.GeoJson(
-    geo_data_filter,
+    geo_data, # Peta utama menampilkan seluruh data
     name="Kloroplet Penduduk Lamongan",
     style_function=ganti_warna,
     control=True,
@@ -234,21 +177,72 @@ m.get_root().html.add_child(folium.Element(legenda_html))
 st_folium(m, width="100%", height=550, returned_objects=[])
 
 # ==========================================
-# 6. MENAMPILKAN RINGKASAN METRIK (DI BAWAH PETA)
+# 5. MENAMPILKAN RINGKASAN METRIK GLOBAL
 # ==========================================
 st.markdown("---")
+# Menghitung total data keseluruhan Kabupaten Lamongan untuk Metrik Atas
+total_penduduk_all = int(df['Jumlah Penduduk'].sum())
+total_laki_all = int(df['Laki-laki'].sum())
+total_perempuan_all = int(df['Perempuan'].sum())
+total_desa_all = int(df['Desa'].nunique())
+
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric(f"Total Penduduk ({label_status})", f"{total_penduduk:,} Jiwa")
+    st.metric("Total Penduduk (Kab. Lamongan)", f"{total_penduduk_all:,} Jiwa")
 with col2:
-    st.metric(f"Jumlah Laki-laki ({label_status})", f"{total_laki:,} Jiwa")
+    st.metric("Total Laki-laki", f"{total_laki_all:,} Jiwa")
 with col3:
-    st.metric(f"Jumlah Perempuan ({label_status})", f"{total_perempuan:,} Jiwa")
+    st.metric("Total Perempuan", f"{total_perempuan_all:,} Jiwa")
 with col4:
-    st.metric("Jumlah Desa Terseleksi", f"{total_desa} Desa")
+    st.metric("Total Wilayah Desa", f"{total_desa_all} Desa")
 
 # ==========================================
-# 7. MENAMPILKAN TABEL DATA DI BAWAH METRIK
+# 6. KOMPONEN FILTER UTAMA (PINDAH KE SINI)
 # ==========================================
-st.markdown("### 📊 Tabel Data Atribut Wilayah Terfilter")
+st.markdown("---")
+st.markdown("### 🔍 Penyaringan Tabel Data Atribut")
+
+kecamatan_terpilih = st.selectbox(
+    "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
+    options=["-- Semua Kecamatan --"] + daftar_kecamatan
+)
+
+if kecamatan_terpilih != "-- Semua Kecamatan --":
+    df_kec = df[df['Kecamatan'] == kecamatan_terpilih]
+    daftar_desa = sorted(df_kec['Desa'].unique())
+else:
+    df_kec = df
+    daftar_desa = sorted(df['Desa'].unique())
+
+desa_terpilih = st.multiselect(
+    "🔍 **Langkah 2: Pilih / Centang Beberapa Desa yang Diinginkan:**",
+    options=daftar_desa,
+    placeholder="Ketik atau pilih nama beberapa desa..."
+)
+
+# Logika Pemfilteran Data Khusus untuk Tabel Atribut & Unduhan CSV
+if desa_terpilih:
+    df_filter = df[df['Desa'].isin(desa_terpilih)]
+    label_status = "Hasil Seleksi Desa"
+elif kecamatan_terpilih != "-- Semua Kecamatan --":
+    df_filter = df_kec
+    label_status = f"Kec. {kecamatan_terpilih}"
+else:
+    df_filter = df
+    label_status = "Total Lamongan"
+
+# Membuat tombol download csv dinamis di dalam sidebar berdasarkan tabel terfilter
+csv_data = df_filter.to_csv(index=False).encode('utf-8')
+with st.sidebar:
+    st.download_button(
+        label="📥 Unduh Data Terfilter (CSV)",
+        data=csv_data,
+        file_name=f"data_penduduk_lamongan_{label_status.replace(' ', '_')}.csv",
+        mime="text/csv"
+    )
+
+# ==========================================
+# 7. MENAMPILKAN TABEL DATA DI PALING BAWAH
+# ==========================================
+st.markdown(f"##### Pilihan Aktif: {label_status} ({len(df_filter)} baris data)")
 st.dataframe(df_filter, use_container_width=True)
