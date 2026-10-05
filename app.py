@@ -250,6 +250,32 @@ legenda_html = '''
 </div>
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
+# --- POSISI ELEMEN VISUAL DI BAWAH PETA ---
+st.markdown("---")
+st.markdown("### 📊 Analisis dan Detail Data Terfilter")
+
+# Membuat layout 2 kolom sejajar (Kiri: Tabel, Kanan: Grafik)
+col_tabel, col_grafik = st.columns([5, 5])
+
+with col_tabel:
+    st.markdown("#### 📋 Tabel Detail Penduduk per Desa")
+    # Mengurutkan tabel berdasarkan Jumlah Penduduk terbanyak agar mudah dibaca
+    df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
+    st.dataframe(df_tabel_tampil, use_container_width=True, height=400)
+
+with col_grafik:
+    st.markdown("#### 📈 Grafik Perbandingan Populasi Desa")
+    
+    # Validasi jika data terfilter kosong agar tidak memicu error visualisasi
+    if not df_filter.empty:
+        # Menyiapkan data khusus untuk kebutuhan sumbu grafik
+        df_chart = df_filter.set_index("Desa")[["Laki-laki", "Perempuan"]]
+        
+        # Menampilkan grafik batang bertumpuk (stacked bar chart) yang interaktif
+        st.bar_chart(df_chart, use_container_width=True, height=400)
+    else:
+        st.info("💡 Tidak ada data yang tersedia untuk dibuatkan grafik berdasarkan filter saat ini.")
+
 
 st_folium(m, width="100%", height=500, returned_objects=[])
 
