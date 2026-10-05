@@ -145,7 +145,7 @@ with st.sidebar:
 # ==========================================
 
 # --- POSISI 1: KARTU METRIK DI ATAS ---
-st.markdown("### 📊 Ringkasan Data Konten")
+st.markdown("### 📊 Ringkasan Data Webgis")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Total Penduduk", f"{total_penduduk:,} Jiwa")
 m2.metric("Laki-laki", f"{total_laki:,} Jiwa")
