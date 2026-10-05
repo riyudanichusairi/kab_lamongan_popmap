@@ -7,7 +7,7 @@ import pandas as pd
 import branca.colormap as cm
 
 # Konfigurasi halaman penuh (wide mode)
-st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
+st.set_page_config(layout="wide", page_title="WebGIS Penduduk Lamongan 2024", page_icon="🌐")
 
 # ==========================================
 # 1. MEMBUAT PANEL SAMPING (SIDEBAR)
