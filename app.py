@@ -57,11 +57,6 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# --- PERBAIKAN KRITIS: Memastikan tipe data adalah numerik agar Grafik bisa muncul ---
-df['Jumlah Penduduk'] = pd.to_numeric(df['Jumlah Penduduk'], errors='coerce').fillna(0).astype(int)
-df['Laki-laki'] = pd.to_numeric(df['Laki-laki'], errors='coerce').fillna(0).astype(int)
-df['Perempuan'] = pd.to_numeric(df['Perempuan'], errors='coerce').fillna(0).astype(int)
-
 # Title Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan")
 
@@ -169,11 +164,6 @@ folium.TileLayer(
 
 def ganti_warna(fitur):
     jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
-    try:
-        jumlah_pop = int(jumlah_pop)
-    except:
-        jumlah_pop = 0
-        
     if jumlah_pop > 6000:
         warna = '#081d58'
     elif jumlah_pop > 4500:
@@ -270,3 +260,15 @@ st.markdown(f"### 📈 Ringkasan Statistik Data ({label_status})")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("🏠 Total Wilayah Desa", f"{total_desa} Desa")
 m2.metric("👥 Total Penduduk", f"{total_penduduk:,} Jiwa")
+m3.metric("👨 Laki-laki", f"{total_laki:,} Jiwa")
+m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
+
+# --- POSISI 3: FITUR KEMBALI - TABEL DI ATAS GRAFIK ---
+st.markdown("### 📋 Detail Data Tabular")
+st.dataframe(df_filter, use_container_width=True, hide_index=True)
+
+# --- POSISI 4: VISUALISASI GRAFIK BATANG ---
+st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
+
+if not df_filter.empty:
+    chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
