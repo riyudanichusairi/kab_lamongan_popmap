@@ -240,7 +240,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# Menampilkan legenda HTML lengkap beserta penutup string-nya
+# Deklarasi teks Legenda HTML (Tanda petik tiga pembuka)
 legenda_html = '''
 <div style="
     position: fixed; 
