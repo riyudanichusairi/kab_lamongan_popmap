@@ -219,8 +219,8 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Logika otomatis auto-zoom peta ke area terfilter (hanya aktif jika user memilih filter)
-if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilled:
+# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
+if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
