@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
@@ -214,7 +214,7 @@ base_carto = folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Perbaikan Kritis: Nilai indeks array warna [0, 1000, 2000, 3000, 4500, 6000, 10000] sudah ditulis lengkap
+# Skema klasifikasi rentang warna kloroplet
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
