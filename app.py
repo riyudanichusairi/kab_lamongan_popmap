@@ -178,7 +178,7 @@ st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 # Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
 map_center = [-7.14, 112.33]
-map_zoom = 12
+map_zoom = 15
 
 m = folium.Map(
     location=map_center, 
