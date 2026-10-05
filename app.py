@@ -1,13 +1,17 @@
+import os
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
-import json
-from folium.plugins import Search
-import pandas as pd
-import branca.colormap as cm
 
-# Konfigurasi halaman penuh (wide mode)
-st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
+# 1. PENGATURAN HALAMAN (Wajib ditaruh di baris paling atas setelah import)
+st.set_page_config(
+    page_title="Dashboard WebGIS Lamongan",
+    page_icon="📊",
+    layout="wide",  # Mengaktifkan mode layar penuh/lebar sesuai gambar Anda
+    initial_sidebar_state="expanded"
+)
+
+# 2. PENANGANAN JALUR LOGO ABSOLUT
+current_dir = os.path.dirname(os.path.abspath(__file__))
+logo_path = os.path.join(current_dir, "logo_lamongan.png")
 
 # ==========================================
 # 3. STRUKTUR SIDEBAR (BILAH SAMPING)
