@@ -78,7 +78,7 @@ if 'kec_key' not in st.session_state:
 # Skrip ini membaca state widget yang diletakkan di bawah menggunakan container
 with filter_container:
     st.markdown("---")
-    st.markdown("### 🔍 Penyaringan Data Dashboard (Peta, Metrik & Tabel)")
+    st.markdown("### 🔍 Penyaringan Data Dashboard")
     
     kecamatan_terpilih = st.selectbox(
         "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
