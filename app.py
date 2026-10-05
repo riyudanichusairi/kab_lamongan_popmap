@@ -208,7 +208,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# Perbaikan string Legenda HTML yang terputus
+# Legenda HTML
 legenda_html = '''
 <div style="
     position: fixed; 
@@ -248,7 +248,7 @@ with met4:
     st.metric(label="🏢 Total Wilayah Desa/Kel", value=f"{total_desa:,} Wilayah")
 
 # --- POSISI 3: TABEL & GRAFIK DATA ---
-col_tabel, col_grafik = st.columns([5, 5])
+col_tabel, col_grafik = st.columns()
 
 with col_tabel:
     st.markdown("#### 📋 Tabel Data Demografi")
@@ -257,3 +257,4 @@ with col_tabel:
 with col_grafik:
     st.markdown("#### 📊 Grafik Komparasi Penduduk per Desa")
     if not df_filter.empty:
+        # Menampilkan top 10 desa dengan penduduk terbanyak
