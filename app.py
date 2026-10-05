@@ -15,7 +15,11 @@ with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
     with col_center:
         st.write("") 
-        st.image("logo_lamongan.png", use_container_width=True) 
+        # Menggunakan try-except agar aman jika logo lokal tidak ditemukan
+        try:
+            st.image("logo_lamongan.png", use_container_width=True)
+        except:
+            st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
     
     st.title("WebGIS Lamongan")
     st.write(
@@ -36,8 +40,12 @@ with st.sidebar:
 # ==========================================
 # 2. DATA MANAGEMENT (MEMBACA & EKSTRAK DATA)
 # ==========================================
-with open("kab_lamongan_popmap.geojson", "r") as f:
-    geo_data = json.load(f)
+try:
+    with open("kab_lamongan_popmap.geojson", "r") as f:
+        geo_data = json.load(f)
+except FileNotFoundError:
+    st.error("❌ File 'kab_lamongan_popmap.geojson' tidak ditemukan. Harap pastikan file spasial berada di folder yang sama.")
+    st.stop()
 
 records = []
 for fitur in geo_data['features']:
@@ -118,26 +126,17 @@ with st.sidebar:
     )
 
 # ==========================================
-# 5. MENAMPILKAN RINGKASAN METRIK
+# 5. MEMBANGUN & MENAMPILKAN PETA INTERAKTIF KLOROPLET
 # ==========================================
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric(f"Total Penduduk ({label_status})", f"{total_penduduk:,} Jiwa")
-with col2:
-    st.metric(f"Jumlah Laki-laki ({label_status})", f"{total_laki:,} Jiwa")
-with col3:
-    st.metric(f"Jumlah Perempuan ({label_status})", f"{total_perempuan:,} Jiwa")
-with col4:
-    st.metric("Jumlah Desa Terseleksi", f"{total_desa} Desa")
-
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# ==========================================
-# 6. MEMBANGUN PETA FOLIUM DENGAN GEOMETRI FILTER
-# ==========================================
+# Koordinat pusat default wilayah Lamongan
+map_center = [-7.12, 112.41]
+map_zoom = 11
+
 m = folium.Map(
-    location=[-7.12, 112.41], 
-    zoom_start=11, 
+    location=map_center, 
+    zoom_start=map_zoom, 
     tiles=None,
     control_scale=True
 )
@@ -205,7 +204,7 @@ legenda_html = '''
     bottom: 25px; 
     left: 50%; 
     transform: translateX(-50%);
-    width: 650px; 
+    width: 750px; 
     height: 65px; 
     border: 2px solid #666666; 
     z-index: 9999; 
@@ -231,33 +230,25 @@ legenda_html = '''
 '''
 m.get_root().html.add_child(folium.Element(legenda_html))
 
-folium.features.GeoJsonPopup(
-    fields=["KEC", "KEL_DES", "laki_laki", "perempuan", "jumlah_penduduk"],
-    aliases=["Kecamatan: ", "Desa/Kelurahan: ", "Laki-laki: ", "Perempuan: ", "Jumlah Penduduk: "],
-    localize=True
-).add_to(choro_layer)
-
-folium.LayerControl(position='topleft').add_to(m)
-
-st_folium(m, height=550, use_container_width=True)
+# Render peta folium ke aplikasi Streamlit
+st_folium(m, width="100%", height=550, returned_objects=[])
 
 # ==========================================
-# 7. MENAMPILKAN TABEL DATA HASIL SELEKSI
+# 6. MENAMPILKAN RINGKASAN METRIK (DI BAWAH PETA)
 # ==========================================
 st.markdown("---")
-st.markdown(f"### 📋 Tabel Data Penduduk ({label_status})")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.metric(f"Total Penduduk ({label_status})", f"{total_penduduk:,} Jiwa")
+with col2:
+    st.metric(f"Jumlah Laki-laki ({label_status})", f"{total_laki:,} Jiwa")
+with col3:
+    st.metric(f"Jumlah Perempuan ({label_status})", f"{total_perempuan:,} Jiwa")
+with col4:
+    st.metric("Jumlah Desa Terseleksi", f"{total_desa} Desa")
 
-# Menyiapkan dataframe yang rapi dengan mengurutkannya berdasarkan Kecamatan & Desa
-df_tabel = df_filter.sort_values(by=['Kecamatan', 'Desa']).reset_index(drop=True)
-
-# Format tampilan angka ribuan agar mudah dibaca di tabel menggunakan format container/column Streamlit
-st.dataframe(
-    df_tabel, 
-    use_container_width=True, 
-    hide_index=True,
-    column_config={
-        "Jumlah Penduduk": st.column_config.NumberColumn(format="%d Jiwa"),
-        "Laki-laki": st.column_config.NumberColumn(format="%d Jiwa"),
-        "Perempuan": st.column_config.NumberColumn(format="%d Jiwa"),
-    }
-)
+# ==========================================
+# 7. MENAMPILKAN TABEL DATA DI BAWAH METRIK
+# ==========================================
+st.markdown("### 📊 Tabel Data Atribut Wilayah Terfilter")
+st.dataframe(df_filter, use_container_width=True)
