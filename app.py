@@ -93,7 +93,7 @@ else:
 
 with filter_container:
     desa_terpilih = st.multiselect(
-        "🔍 **Langkah 2: Pilih / Centang Beberapa Desa yang Diinginkan:**",
+        "🔍 **Langkah 2: Pilih Berdasarkan Desa/Kelurahan:**",
         options=daftar_desa,
         placeholder="Ketik atau pilih nama beberapa desa...",
         key="desa_box"
