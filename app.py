@@ -52,11 +52,11 @@ for fitur in geo_data['features']:
     nama_des = props.get('KEL_DES', 'Tidak Diketahui')
     nama_kec = props.get('KEC', 'Tidak Diketahui')
     
-    # GENERASI LINK GOOGLE MAPS PADA POP-UP PETA (Metode 1)
+    # GENERASI LINK GOOGLE MAPS PADA POP-UP PETA
     query_pencarian = f"Desa {nama_des}, Kecamatan {nama_kec}, Kabupaten Lamongan"
     link_gmaps = f"https://google.com{query_pencarian.replace(' ', '+')}"
     
-    # Menyisipkan tag HTML Link ke dalam properti GeoJSON untuk dibaca komponen Pop-up Folium
+    # Menyisipkan tag HTML Link ke dalam properti GeoJSON
     fitur['properties']['gmaps_link'] = f'<a href="{link_gmaps}" target="_blank" style="color: #007bff; text-decoration: underline; font-weight: bold;">🌐 Buka di Google Maps</a>'
 
     records.append({
@@ -150,12 +150,11 @@ with st.sidebar:
         mime="text/csv"
     )
     
-    # TOMBOL NAVIGASI GOOGLE MAPS PADA SIDEBAR (Metode 2)
+    # TOMBOL NAVIGASI GOOGLE MAPS PADA SIDEBAR
     if desa_terpilih:
         st.markdown("---")
         st.write("🗺️ **Rute Google Maps Desa Terpilih:**")
         for des in desa_terpilih:
-            # Mencari pasangan kecamatan dari desa terpilih secara aman menggunakan .iloc
             match_row = df[df['Desa'] == des]
             if not match_row.empty:
                 kec_asal = match_row.iloc[0]['Kecamatan']
@@ -216,7 +215,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python (Telah Diperbaiki Parameter Indeks-nya)
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -262,8 +261,14 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# FITUR POP-UP DEMOGRAFI DENGAN INTEGRASI GOOGLE MAPS (Sintaks kurung tutup ')' sudah diperbaiki)
+# FITUR POP-UP DEMOGRAFI DENGAN INTEGRASI GOOGLE MAPS
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan", "gmaps_link"],
     aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:", "Tautan Luar:"],
     labels=True,
+    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 250px;"
+).add_to(choro_layer)
+
+# Fitur Tooltip layang saat kursor melewati wilayah desa
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
