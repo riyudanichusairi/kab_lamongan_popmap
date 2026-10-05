@@ -58,7 +58,7 @@ for fitur in geo_data['features']:
     })
 df = pd.DataFrame(records)
 
-# Title Aplikasi
+# Title Utama Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
@@ -176,21 +176,42 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
+# Modifikasi: Koordinat dipusatkan dan tingkat perbesaran dinaikkan agar fokus ke wilayah Lamongan saat pertama kali dibuka
 map_center = [-7.14, 112.33]
-map_zoom = 10
+map_zoom = 12
 
 m = folium.Map(
     location=map_center, 
     zoom_start=map_zoom, 
-    tiles=None,
+    tiles=None,              # Disetel None agar tidak menimpa basemap yang dikonfigurasi di bawah
     control_scale=True
 )
 
+# Integrasi 1: Lapisan Basemap Peta Jalan Standar (OpenStreetMap)
 folium.TileLayer(
     tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr='&copy; OpenStreetMap contributors',
-    name='Peta Jalan (OpenStreetMap)'
+    name='Peta Jalan (OpenStreetMap)',
+    overlay=False,
+    control=True
+).add_to(m)
+
+# Integrasi 2: Lapisan Basemap Citra Satelit Open-Source Esri World Imagery
+folium.TileLayer(
+    tiles='https://arcgisonline.com{z}/{y}/{x}',
+    attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    name='Citra Satelit (Esri World Imagery)',
+    overlay=False,
+    control=True
+).add_to(m)
+
+# Integrasi 3: Lapisan Basemap Citra Satelit Alternatif Google Satellite
+folium.TileLayer(
+    tiles='https://google.com{x}&y={y}&z={z}',
+    attr='Map data &copy; Google',
+    name='Citra Satelit (Google Satellite)',
+    overlay=False,
+    control=True
 ).add_to(m)
 
 # Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
@@ -208,7 +229,7 @@ def ganti_warna(fitur):
         'fillColor': colormap_peta(jumlah_pop), 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.75       
+        'fillOpacity': 0.70       # Sedikit dikurangi dari 0.75 ke 0.70 agar citra satelit di bawahnya agak terlihat membayang
     }
 
 choro_layer = folium.GeoJson(
@@ -219,7 +240,7 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
+# Logika otomatis auto-zoom peta ke area terfilter (Hanya berjalan jika filter diisi)
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
@@ -256,7 +277,3 @@ folium.features.GeoJsonTooltip(
 ).add_to(choro_layer)
 
 # Menambahkan legenda Branca ke dalam peta
-colormap_peta.add_to(m)
-
-# Menampilkan hasil render peta ke Streamlit
-st_folium(m, width='100%', height=550, returned_objects=[])
