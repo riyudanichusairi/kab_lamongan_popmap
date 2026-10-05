@@ -28,10 +28,10 @@ with st.sidebar:
     )
     st.markdown("---")
     st.write("📌 **Panduan Penggunaan:**")
-    st.caption("1. Gunakan panel filter di bawah peta untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
+    st.caption("1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
-    st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik di bawah akan berubah otomatis secara bersamaan.")
-    st.caption("4. Arahkan kursor (*hover*) pada wilayah desa di peta untuk melihat detail data demografi.")
+    st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik akan berubah otomatis secara bersamaan.")
+    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -124,7 +124,7 @@ else:
     geo_data_filter = geo_data
     label_status = "Total Lamongan"
 
-# Penghitungan metrik
+# Penghitungan metrik utama secara dinamis
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
@@ -141,7 +141,7 @@ with st.sidebar:
     )
 
 # ==========================================
-# 5. MENAMPILKAN ELEMEN VISUAL
+# 5. MENAMPILKAN ELEMEN VISUAL 
 # ==========================================
 
 # --- POSISI 1: KARTU METRIK DI ATAS ---
@@ -192,7 +192,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat Legenda Resmi Menggunakan Pustaka Branca Python (Aman dari Tanda Petik)
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -218,11 +218,13 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
+# Logika otomatis auto-zoom peta ke area terfilter
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
+# Fitur pencarian teks langsung di dalam peta
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -236,16 +238,24 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-folium.features.GeoJsonTooltip(
-    fields=["KEL_DES", "KEC"],
-    aliases=["Desa/Kelurahan: ", "Kecamatan: "],
+# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
+folium.features.GeoJsonPopup(
+    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
     labels=True,
-    sticky=True,
-    style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
+    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
 ).add_to(choro_layer)
 
-# Menambahkan legenda Branca ke dalam objek Peta
+# Fitur Tooltip layang saat kursor melewati wilayah desa
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=["Desa: "],
+    labels=False,
+    sticky=True
+).add_to(choro_layer)
+
+# Menambahkan legenda Branca ke dalam peta
 colormap_peta.add_to(m)
 
-# Menampilkan peta ke halaman Streamlit
+# Menampilkan hasil render peta ke Streamlit
 st_folium(m, width='100%', height=550, returned_objects=[])
