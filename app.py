@@ -192,7 +192,7 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# FUNGSI DYNAMIC AUTO-ZOOM PETA (Menggunakan ekstraksi koordinat manual agar lebih aman dari error)
+# FUNGSI DYNAMIC AUTO-ZOOM PETA
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         try:
@@ -204,7 +204,7 @@ if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
                 if geom_type == "Polygon":
                     for ring in coords:
                         for p in ring:
-                            koordinat_list.append([p[1], p[0]]) # Folium menggunakan format [Lat, Lon]
+                            koordinat_list.append([p[1], p[0]])
                 elif geom_type == "MultiPolygon":
                     for poly in coords:
                         for ring in poly:
@@ -240,7 +240,7 @@ folium.features.GeoJsonTooltip(
     style="font-family: sans-serif; font-size: 12px; background-color: white; color: black; font-weight: bold; padding: 5px; border-radius: 3px;"
 ).add_to(choro_layer)
 
-# Menampilkan legenda warna kloroplet lengkap
+# Menampilkan legenda HTML lengkap beserta penutup string-nya
 legenda_html = '''
 <div style="
     position: fixed; 
