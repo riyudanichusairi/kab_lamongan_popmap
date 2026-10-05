@@ -257,15 +257,15 @@ m2.metric("👥 Total Penduduk", f"{total_penduduk:,} Jiwa")
 m3.metric("👨 Laki-laki", f"{total_laki:,} Jiwa")
 m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
 
-# --- POSISI 3: PERUBAHAN BARU - VISUALISASI GRAFIK BATANG ---
+# --- POSISI 3: VISUALISASI GRAFIK BATANG ---
 st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
 
 if not df_filter.empty:
-    # Mempersiapkan dataframe khusus grafik (Desa sebagai indeks agar label sumbu X rapi)
     chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
-    
-    # Menampilkan grafik batang bertumpuk berdampingan yang interaktif dan responsif
     st.bar_chart(chart_data, color=["#1f77b4", "#ff7f0e"], use_container_width=True)
 else:
     st.info("💡 Tidak ada data desa yang terpilih untuk ditampilkan pada grafik.")
 
+# --- POSISI 4: PERUBAHAN BARU - TABEL PINDAH KE BAWAH GRAFIK ---
+st.markdown("### 📋 Detail Data Tabular")
+st.dataframe(df_filter, use_container_width=True, hide_index=True)
