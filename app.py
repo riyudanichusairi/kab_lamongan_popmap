@@ -215,7 +215,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python (SUDAH DIPERBAIKI)
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -271,4 +271,3 @@ folium.features.GeoJsonPopup(
 
 # Fitur Tooltip layang saat kursor melewati wilayah desa
 folium.features.GeoJsonTooltip(
-    fields=["KEL_DES"],
