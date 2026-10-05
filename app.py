@@ -28,8 +28,8 @@ with st.sidebar:
     st.markdown("---")
     st.write("📌 **Panduan Penggunaan:**")
     st.caption("1. Gunakan panel filter di bawah peta untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
-    st.caption("2. Peta, Metrik Utama, Grafik, dan Tabel di bawah akan berubah otomatis secara bersamaan.")
-    st.caption("3. Gunakan kolom pencarian di kanan atas peta jika ingin melacak lokasi desa secara instan.")
+    st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
+    st.caption("3. Peta, Metrik Utama, Grafik, dan Tabel di bawah akan berubah otomatis secara bersamaan.")
     st.caption("4. Arahkan kursor (*hover*) pada wilayah desa di peta untuk melihat detail data demografi.")
     
     st.markdown("---")
@@ -192,6 +192,14 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
+# --- PERUBAHAN BARU: FUNGSI DYNAMIC AUTO-ZOOM ---
+# Jika filter aktif (Kecamatan dipilih atau Desa dipilih), hitung batas koordinatnya
+if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
+    if geo_data_filter['features']: # Memastikan array fitur GeoJSON tidak kosong
+        # Mengambil koordinat pembatas geometri dari layer GeoJson terfilter
+        bounds = choro_layer.get_bounds()
+        m.fit_bounds(bounds) # Menginstruksikan peta agar langsung menyesuaikan zoom
+
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -260,12 +268,3 @@ m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
 # --- POSISI 3: VISUALISASI GRAFIK BATANG ---
 st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
 
-if not df_filter.empty:
-    chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
-    st.bar_chart(chart_data, color=["#1f77b4", "#ff7f0e"], use_container_width=True)
-else:
-    st.info("💡 Tidak ada data desa yang terpilih untuk ditampilkan pada grafik.")
-
-# --- POSISI 4: PERUBAHAN BARU - TABEL PINDAH KE BAWAH GRAFIK ---
-st.markdown("### 📋 Detail Data Tabular")
-st.dataframe(df_filter, use_container_width=True, hide_index=True)
