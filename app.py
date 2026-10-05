@@ -31,7 +31,7 @@ with st.sidebar:
     st.caption("1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
     st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
     st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik akan berubah otomatis secara bersamaan.")
-    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap.")
+    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, and **klik** wilayah desa untuk melihat tabel demografi lengkap.")
     
     st.markdown("---")
     st.write("📊 **Aksi Data:**")
@@ -176,14 +176,14 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Modifikasi: Koordinat dipusatkan dan tingkat perbesaran dinaikkan agar fokus ke wilayah Lamongan saat pertama kali dibuka
+# Koordinat dipusatkan dan tingkat perbesaran dinaikkan agar fokus ke wilayah Lamongan saat pertama kali dibuka
 map_center = [-7.14, 112.33]
-map_zoom = 12
+map_zoom = 10
 
 m = folium.Map(
     location=map_center, 
     zoom_start=map_zoom, 
-    tiles=None,              # Disetel None agar tidak menimpa basemap yang dikonfigurasi di bawah
+    tiles=None,              
     control_scale=True
 )
 
@@ -214,7 +214,7 @@ folium.TileLayer(
     control=True
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
+# Perbaikan di bagian ini: Menambahkan indeks angka rentang populasi secara lengkap
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -229,7 +229,7 @@ def ganti_warna(fitur):
         'fillColor': colormap_peta(jumlah_pop), 
         'color': '#666666',      
         'weight': 0.5,           
-        'fillOpacity': 0.70       # Sedikit dikurangi dari 0.75 ke 0.70 agar citra satelit di bawahnya agak terlihat membayang
+        'fillOpacity': 0.70       
     }
 
 choro_layer = folium.GeoJson(
@@ -277,3 +277,6 @@ folium.features.GeoJsonTooltip(
 ).add_to(choro_layer)
 
 # Menambahkan legenda Branca ke dalam peta
+colormap_peta.add_to(m)
+
+# Menambahkan menu kontrol lapisan di pojok kiri atas peta agar user bisa memilih basemap secara interaktif
