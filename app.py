@@ -157,7 +157,8 @@ with st.sidebar:
         for des in desa_terpilih:
             match_row = df[df['Desa'] == des]
             if not match_row.empty:
-                kec_asal = match_row.iloc[0]['Kecamatan']
+                # Membaca entri nama kecamatan baris pertama secara aman
+                kec_asal = match_row['Kecamatan'].values[0]
                 q_sidebar = f"Desa {des}, Kecamatan {kec_asal}, Kabupaten Lamongan"
                 url_sidebar = f"https://google.com{q_sidebar.replace(' ', '+')}"
                 st.link_button(f"🚗 Navigasi Ke {des}", url_sidebar, use_container_width=True)
@@ -215,7 +216,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python (SUDAH DIPERBAIKI)
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python (SUDAH DIPERBAIKI INDEKSNYA)
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -269,5 +270,3 @@ folium.features.GeoJsonPopup(
     style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 250px;"
 ).add_to(choro_layer)
 
-# Fitur Tooltip layang saat kursor melewati wilayah desa
-folium.features.GeoJsonTooltip(
