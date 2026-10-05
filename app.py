@@ -9,7 +9,7 @@ import pandas as pd
 st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
 # ==========================================
-# 1. MEMBUAT PANEL SAMPING (SIDEBAR)
+# 1. MEMBUAT PANEL SAKPING (SIDEBAR)
 # ==========================================
 with st.sidebar:
     col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
@@ -192,13 +192,11 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# --- PERUBAHAN BARU: FUNGSI DYNAMIC AUTO-ZOOM ---
-# Jika filter aktif (Kecamatan dipilih atau Desa dipilih), hitung batas koordinatnya
+# FUNGSI DYNAMIC AUTO-ZOOM PETA
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
-    if geo_data_filter['features']: # Memastikan array fitur GeoJSON tidak kosong
-        # Mengambil koordinat pembatas geometri dari layer GeoJson terfilter
+    if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
-        m.fit_bounds(bounds) # Menginstruksikan peta agar langsung menyesuaikan zoom
+        m.fit_bounds(bounds) 
 
 peta_search = Search(
     layer=choro_layer,
@@ -267,4 +265,10 @@ m4.metric("👩 Perempuan", f"{total_perempuan:,} Jiwa")
 
 # --- POSISI 3: VISUALISASI GRAFIK BATANG ---
 st.markdown("### 📊 Grafik Perbandingan Demografi Penduduk Per Desa")
+
+if not df_filter.empty:
+    chart_data = df_filter.set_index('Desa')[['Laki-laki', 'Perempuan']]
+    st.bar_chart(chart_data, color=["#1f77b4", "#ff7f0e"], use_container_width=True)
+else:
+    st.info("💡 Tidak ada data desa yang terpilih untuk ditampilkan pada grafik.")
 
