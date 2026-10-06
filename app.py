@@ -160,8 +160,14 @@ col_tabel, col_grafik = st.columns(2)
 
 with col_tabel:
     st.markdown("#### 📋 Tabel Detail Penduduk per Desa")
+    # Mengurutkan berdasarkan populasi tertinggi dan reset indeks awal (0,1,2,...)
     df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
-    st.dataframe(df_tabel_tampil, use_container_width=True, height=350)
+    
+    # PERBAIKAN: Kode All Join Penomoran (Membuat kolom "No." mulai dari 1 di posisi paling depan)
+    df_tabel_tampil.insert(0, 'No.', df_tabel_tampil.index + 1)
+    
+    # Menampilkan tabel dan menyembunyikan kolom indeks bawaan sistem yang bernilai 0
+    st.dataframe(df_tabel_tampil, use_container_width=True, height=350, hide_index=True)
 
 with col_grafik:
     st.markdown("#### 📊 Grafik Perbandingan Populasi Desa")
@@ -193,7 +199,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
+# PERBAIKAN: Melengkapi indeks batas kelas pewarnaan kloroplet Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -219,7 +225,7 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
+# Pengkondisian zoom wilayah peta secara otomatis
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
