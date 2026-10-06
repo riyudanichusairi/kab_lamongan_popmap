@@ -6,34 +6,49 @@ from folium.plugins import Search
 import pandas as pd
 import branca.colormap as cm
 
-# ==========================================
-# 1. KONFIGURASI HALAMAN UTAMA (WIDE MODE)
-# ==========================================
-st.set_page_config(layout="wide", page_title="Visualisasi Data Kependudukan", page_icon="🌐")
-
-st.markdown("""
-    <style>
-    .block-container { padding-top: 1rem; padding-bottom: 1rem; }
-    div[data-testid="stVerticalBlock"] > div:has(div.stDataFrame) { margin-top: 20px; }
-    </style>
-""", unsafe_allow_html=True)
+# Konfigurasi halaman penuh (wide mode)
+st.set_page_config(layout="wide", page_title="WebGIS Lamongan", page_icon="🌐")
 
 # ==========================================
-# 2. DATA MANAGEMENT (DIPROTEKSI DARI FILE RUSAK/KOSONG)
+# 1. MEMBUAT PANEL SAMPING (SIDEBAR)
+# ==========================================
+with st.sidebar:
+    col_left, col_center, col_right = st.columns([1.5, 7, 1.5])
+    with col_center:
+        st.write("") 
+        try:
+            st.image("logo_lamongan.png", use_container_width=True)
+        except:
+            st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
+    
+    st.title("WebGIS Penduduk Lamongan 2024")
+    st.write(
+        "Aplikasi Dashboard Geospasial Interaktif untuk visualisasi dan analisis data "
+        "kependudukan tingkat Desa/Kelurahan di wilayah Kabupaten Lamongan, Provinsi Jawa Timur."
+    )
+    st.markdown("---")
+    st.write("📌 **Panduan Penggunaan:**")
+    st.caption("1. Gunakan panel filter di bawah untuk menyaring data berdasarkan 'Kecamatan' atau 'Desa'.")
+    st.caption("2. Peta akan otomatis melakukan ZOOM ke area wilayah terfilter secara real-time.")
+    st.caption("3. Peta, Metrik Utama, Tabel, dan Grafik akan berubah otomatis secara bersamaan.")
+    st.caption("4. Arahkan kursor (*hover*) untuk melihat nama desa, dan **klik** wilayah desa untuk melihat tabel demografi lengkap.")
+    
+    st.markdown("---")
+    st.write("📊 **Aksi Data:**")
+
+# ==========================================
+# 2. DATA MANAGEMENT (MEMBACA & EKSTRAK DATA)
 # ==========================================
 try:
-    with open("kab_lamongan_popmap.geojson", "r", encoding="utf-8") as f:
+    with open("kab_lamongan_popmap.geojson", "r") as f:
         geo_data = json.load(f)
 except FileNotFoundError:
-    st.error("❌ File 'kab_lamongan_popmap.geojson' tidak ditemukan di repositori GitHub Anda.")
-    st.stop()
-except json.JSONDecodeError:
-    st.error("❌ File 'kab_lamongan_popmap.geojson' terdeteksi kosong atau rusak di GitHub. Harap unggah ulang file GeoJSON asli yang sehat ke repositori Anda.")
+    st.error("❌ File 'kab_lamongan_popmap.geojson' tidak ditemukan. Harap pastikan file spasial berada di folder yang sama.")
     st.stop()
 
 records = []
-for fitur in geo_data.get('features', []):
-    props = fitur.get('properties', {})
+for fitur in geo_data['features']:
+    props = fitur['properties']
     records.append({
         'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
         'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
@@ -41,189 +56,207 @@ for fitur in geo_data.get('features', []):
         'Laki-laki': props.get('laki_laki', 0),
         'Perempuan': props.get('perempuan', 0)
     })
+df = pd.DataFrame(records)
 
-if not records:
-    st.warning("⚠️ Tidak ada data objek spasial (features) yang berhasil dibaca dari file GeoJSON.")
-    df = pd.DataFrame(columns=['Kecamatan', 'Desa', 'Jumlah Penduduk', 'Laki-laki', 'Perempuan'])
-else:
-    df = pd.DataFrame(records)
+# Title Aplikasi
+st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
-# 3. HEADER APLIKASI (HTML FLEXBOX FIXED)
+# 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
 # ==========================================
-st.markdown("""
-    <div style="display: flex; align-items: center; gap: 20px; padding: 10px 0; margin-bottom: 10px;">
-        <img src="https://wikimedia.org" width="65" style="object-fit: contain;">
-        <div style="display: flex; flex-direction: column; justify-content: center;">
-            <h2 style="margin: 0; padding: 0; line-height: 1.3; font-family: sans-serif; font-size: 28px; font-weight: bold; color: #1E1E1E;">
-                VISUALISASI DATA KEPENDUDUKAN
-            </h2>
-            <p style="margin: 5px 0 0 0; padding: 0; line-height: 1; color: #666666; font-family: sans-serif; font-size: 14px; letter-spacing: 0.5px;">
-                KABUPATEN LAMONGAN - DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL
-            </p>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+filter_container = st.container()
 
-st.markdown("---")
+daftar_kecamatan = sorted(df['Kecamatan'].unique())
+
+if 'kec_key' not in st.session_state:
+    st.session_state.kec_key = "-- Semua Kecamatan --"
 
 # ==========================================
-# 4. PEMBAGIAN KOLOM UTAMA (KIRI: FILTER, KANAN: PETA)
+# 4. LOGIKA FILTERING DATA UNTUK SEMUA ELEMEN
 # ==========================================
-col_kontrol, col_peta = st.columns()
-
-# --- PANEL KONTROL SEBELAH KIRI ---
-with col_kontrol:
-    st.markdown("### 🔍 Cari Data Wilayah")
-    daftar_kecamatan = sorted(df['Kecamatan'].unique()) if not df.empty else []
+with filter_container:
+    st.markdown("---")
+    st.markdown("### 🔍 Penyaringan Data Dashboard")
     
     kecamatan_terpilih = st.selectbox(
-        "Kecamatan:",
+        "📍 **Langkah 1: Filter Berdasarkan Kecamatan (Opsional):**",
         options=["-- Semua Kecamatan --"] + daftar_kecamatan,
         key="kecamatan_box"
     )
 
-    if kecamatan_terpilih != "-- Semua Kecamatan --":
-        df_kec = df[df['Kecamatan'] == kecamatan_terpilih]
-        daftar_desa = sorted(df_kec['Desa'].unique())
-    else:
-        df_kec = df
-        daftar_desa = sorted(df['Desa'].unique()) if not df.empty else []
+if kecamatan_terpilih != "-- Semua Kecamatan --":
+    df_kec = df[df['Kecamatan'] == kecamatan_terpilih]
+    daftar_desa = sorted(df_kec['Desa'].unique())
+else:
+    df_kec = df
+    daftar_desa = sorted(df['Desa'].unique())
 
+with filter_container:
     desa_terpilih = st.multiselect(
-        "Kelurahan/Desa:",
+        "🔍 **Langkah 2: Pilih Beberapa Desa/Kelurahan:**",
         options=daftar_desa,
-        placeholder="- Pilih Desa -",
+        placeholder="Ketik atau pilih nama beberapa desa...",
         key="desa_box"
     )
-    
-    if desa_terpilih:
-        df_filter = df[df['Desa'].isin(desa_terpilih)]
-        geo_data_filter = geo_data.copy()
-        geo_data_filter['features'] = [
-            f for f in geo_data.get('features', []) if f.get('properties', {}).get('KEL_DES') in desa_terpilih
-        ]
-        label_status = "Hasil Seleksi Desa"
-    elif kecamatan_terpilih != "-- Semua Kecamatan --":
-        df_filter = df_kec
-        list_desa_kec = df_kec['Desa'].tolist()
-        geo_data_filter = geo_data.copy()
-        geo_data_filter['features'] = [
-            f for f in geo_data.get('features', []) if f.get('properties', {}).get('KEL_DES') in list_desa_kec
-        ]
-        label_status = f"Kec. {kecamatan_terpilih}"
-    else:
-        df_filter = df
-        geo_data_filter = geo_data
-        label_status = "Total Lamongan"
 
-    st.markdown("---")
-    st.markdown("### 📂 Daftar Layer Peta")
-    st.checkbox("🔘 Kepadatan Penduduk", value=True)
-    st.checkbox("⚪ Fasilitas Pendidikan", value=False)
-    st.checkbox("⚪ Fasilitas Kesehatan", value=False)
-    st.markdown(" ")
-    
-    csv_data = df_filter.to_csv(index=False).encode('utf-8')
+# Proses sinkronisasi data tabel dan spasial geojson
+if desa_terpilih:
+    df_filter = df[df['Desa'].isin(desa_terpilih)]
+    geo_data_filter = geo_data.copy()
+    geo_data_filter['features'] = [
+        f for f in geo_data['features'] 
+        if f['properties'].get('KEL_DES') in desa_terpilih
+    ]
+    label_status = "Hasil Seleksi Desa"
+
+elif kecamatan_terpilih != "-- Semua Kecamatan --":
+    df_filter = df_kec
+    list_desa_kec = df_kec['Desa'].tolist()
+    geo_data_filter = geo_data.copy()
+    geo_data_filter['features'] = [
+        f for f in geo_data['features'] 
+        if f['properties'].get('KEL_DES') in list_desa_kec
+    ]
+    label_status = f"Kec. {kecamatan_terpilih}"
+
+else:
+    df_filter = df
+    geo_data_filter = geo_data
+    label_status = "Total Lamongan"
+
+# Penghitungan metrik utama secara dinamis
+total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
+total_laki = int(df_filter['Laki-laki'].sum())
+total_perempuan = int(df_filter['Perempuan'].sum())
+total_desa = int(df_filter['Desa'].nunique())
+
+# Pembuatan tombol download data di sidebar
+csv_data = df_filter.to_csv(index=False).encode('utf-8')
+with st.sidebar:
     st.download_button(
-        label="📥 Unduh Data (CSV)",
+        label="📥 Unduh Data Terfilter (CSV)",
         data=csv_data,
-        file_name=f"data_penduduk_{label_status.replace(' ', '_')}.csv",
-        mime="text/csv",
-        use_container_width=True
+        file_name=f"data_penduduk_lamongan_{label_status.replace(' ', '_')}.csv",
+        mime="text/csv"
     )
 
-# --- PANEL PETA SEBELAH KANAN ---
-with col_peta:
-    st.info("ℹ️ Batas wilayah administrasi yang digunakan dalam peta ini bersifat indikatif.")
-    map_center = [-7.14, 112.33]
-    map_zoom = 10
-    m = folium.Map(location=map_center, zoom_start=map_zoom, tiles=None, control_scale=True)
-    
-    folium.TileLayer(
-        tiles='https://google.com{x}&y={y}&z={z}',
-        attr='Google Hybrid',
-        name='Google Satelit (Hybrid)'
-    ).add_to(m)
-
-    colormap_peta = cm.StepColormap(
-        colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
-        index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
-        vmin=0, vmax=10000,
-        caption="Jumlah Penduduk per Desa (Jiwa)"
-    )
-
-    def ganti_warna(fitur):
-        jumlah_pop = fitur.get('properties', {}).get('jumlah_penduduk', 0)
-        return {
-            'fillColor': colormap_peta(jumlah_pop), 
-            'color': '#ff1a1a', 
-            'weight': 1.2,           
-            'fillOpacity': 0.45       
-        }
-
-    if geo_data_filter.get('features'):
-        choro_layer = folium.GeoJson(
-            geo_data_filter,
-            name="Kloroplet Penduduk",
-            style_function=ganti_warna,
-            control=True,
-            highlight_function=lambda x: {'weight': 2.5, 'color': '#ffff00', 'fillOpacity': 0.6}
-        ).add_to(m)
-
-        if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
-            bounds = choro_layer.get_bounds()
-            m.fit_bounds(bounds) 
-
-        peta_search = Search(
-            layer=choro_layer, geom_type="Polygon", placeholder="Cari desa...",
-            collapsed=True, position="topright", search_label="KEL_DES", search_zoom=14
-        ).add_to(m)
-
-        folium.features.GeoJsonPopup(
-            fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
-            aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk:", "Laki-laki:", "Perempuan:"],
-            labels=True
-        ).add_to(choro_layer)
-
-        folium.features.GeoJsonTooltip(fields=["KEL_DES"], aliases=["Desa: "], labels=False, sticky=True).add_to(choro_layer)
-
-    colormap_peta.add_to(m)
-    st_folium(m, width='100%', height=550, returned_objects=[])
-
 # ==========================================
-# 5. RINGKASAN METRIK & TABEL DATA (DI BAGIAN BAWAH)
+# 5. MENAMPILKAN ELEMEN VISUAL 
 # ==========================================
-st.markdown("---")
 
-total_penduduk = int(df_filter['Jumlah Penduduk'].sum()) if not df_filter.empty else 0
-total_laki = int(df_filter['Laki-laki'].sum()) if not df_filter.empty else 0
-total_perempuan = int(df_filter['Perempuan'].sum()) if not df_filter.empty else 0
-total_desa = int(df_filter['Desa'].nunique()) if not df_filter.empty else 0
-
-st.markdown("### 📊 Ringkasan Data Makro Konten")
+# --- POSISI 1: KARTU METRIK DI ATAS ---
+st.markdown("### 📊 Ringkasan Data Konten")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Total Penduduk", f"{total_penduduk:,} Jiwa")
 m2.metric("Laki-laki", f"{total_laki:,} Jiwa")
 m3.metric("Perempuan", f"{total_perempuan:,} Jiwa")
 m4.metric("Jumlah Wilayah (Desa)", f"{total_desa} Wilayah")
 
-st.markdown(" ")
-st.markdown("### 📋 Tabel Rekapitulasi Data Wilayah")
+st.markdown("---")
 
-# MODIFIKASI: Menggunakan st.selectbox untuk tab agar kode benar-benar rata kiri (Zero Indentation)
-pilihan_view = st.selectbox("Pilih Jenis Tampilan Data:", ["📋 Tampilkan Data Tabel Administrasi", "📈 Tampilkan Grafik Perbandingan Demografi"])
+# --- POSISI 2: TABEL & GRAFIK (DI TENGAH) ---
+st.markdown("### 📈 Analisis dan Detail Data Terfilter")
+col_tabel, col_grafik = st.columns(2)
 
-if pilihan_view == "📋 Tampilkan Data Tabel Administrasi" and not df_filter.empty:
+with col_tabel:
+    st.markdown("#### 📋 Tabel Detail Penduduk per Desa")
     df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
-    st.dataframe(df_tabel_tampil, use_container_width=True, height=300)
+    st.dataframe(df_tabel_tampil, use_container_width=True, height=350)
 
-if pilihan_view == "📋 Tampilkan Data Tabel Administrasi" and df_filter.empty:
-    st.info("💡 Tidak ada data yang tersedia untuk ditampilkan.")
+with col_grafik:
+    st.markdown("#### 📊 Grafik Perbandingan Populasi Desa")
+    if not df_filter.empty:
+        df_chart = df_filter.set_index("Desa")[["Laki-laki", "Perempuan"]]
+        st.bar_chart(df_chart, use_container_width=True, height=350)
+    else:
+        st.info("💡 Tidak ada data yang tersedia untuk dibuatkan grafik berdasarkan filter saat ini.")
 
-if pilihan_view == "📈 Tampilkan Grafik Perbandingan Demografi" and not df_filter.empty:
-    df_chart = df_filter.set_index("Desa")[["Laki-laki", "Perempuan"]]
-    st.bar_chart(df_chart, use_container_width=True, height=300)
+st.markdown("---")
 
-if pilihan_view == "📈 Tampilkan Grafik Perbandingan Demografi" and df_filter.empty:
-    st.info("💡 Tidak ada data kependudukan yang tersedia untuk grafik.")
+# --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
+st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
+
+# Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
+map_center = [-7.14, 112.33]
+map_zoom = 10
+
+m = folium.Map(
+    location=map_center, 
+    zoom_start=map_zoom, 
+    tiles=None,
+    control_scale=True
+)
+
+folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr='&copy; OpenStreetMap contributors',
+    name='Peta Jalan (OpenStreetMap)'
+).add_to(m)
+
+# Membuat skema klasifikasi warna kloroplet menggunakan Branca Python
+colormap_peta = cm.StepColormap(
+    colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
+    index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
+    vmin=0,
+    vmax=10000,
+    caption="Jumlah Penduduk Kabupaten Lamongan per Desa (Jiwa)"
+)
+
+def ganti_warna(fitur):
+    jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
+    return {
+        'fillColor': colormap_peta(jumlah_pop), 
+        'color': '#666666',      
+        'weight': 0.5,           
+        'fillOpacity': 0.75       
+    }
+
+choro_layer = folium.GeoJson(
+    geo_data_filter,
+    name="Kloroplet Penduduk Lamongan",
+    style_function=ganti_warna,
+    control=True,
+    highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
+).add_to(m)
+
+# Perbaikan Logika: Variabel typo 'desa_terpilled' & 'i=' telah diperbaiki ke 'desa_terpilih' & '!='
+if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
+    if geo_data_filter['features']: 
+        bounds = choro_layer.get_bounds()
+        m.fit_bounds(bounds) 
+
+# Fitur pencarian teks langsung di dalam peta
+peta_search = Search(
+    layer=choro_layer,
+    geom_type="Polygon",
+    placeholder="Cari nama desa/kelurahan...",
+    collapsed=False,
+    position="topright",
+    search_label="KEL_DES",
+    search_zoom=14,
+    weight=3,
+    fill_color="#ff7800",
+    fill_opacity=0.4
+).add_to(m)
+
+# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
+folium.features.GeoJsonPopup(
+    fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
+    aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
+    labels=True,
+    style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
+).add_to(choro_layer)
+
+# Fitur Tooltip layang saat kursor melewati wilayah desa
+folium.features.GeoJsonTooltip(
+    fields=["KEL_DES"],
+    aliases=["Desa: "],
+    labels=False,
+    sticky=True
+).add_to(choro_layer)
+
+# Menambahkan legenda Branca ke dalam peta
+colormap_peta.add_to(m)
+
+# Menampilkan hasil render peta ke Streamlit
+st_folium(m, width='100%', height=550, returned_objects=[])
