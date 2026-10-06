@@ -6,10 +6,12 @@ from folium.plugins import Search
 import pandas as pd
 import branca.colormap as cm
 
+# ==========================================
 # 1. KONFIGURASI HALAMAN UTAMA (WIDE MODE)
+# ==========================================
 st.set_page_config(layout="wide", page_title="Visualisasi Data Kependudukan", page_icon="🌐")
 
-# Menambahkan CSS kustom agar layout lebih presisi dan clean mirip gambar
+# Mengurangi padding bawaan Streamlit agar layout lebih padat dan clean
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; padding-bottom: 1rem; }
@@ -40,25 +42,28 @@ for fitur in geo_data['features']:
 df = pd.DataFrame(records)
 
 # ==========================================
-# 3. HEADER APLIKASI (MIRIP TOP BAR DUKCAPIL)
+# 3. HEADER APLIKASI (SINKRON & TIDAK BERTUMPUK)
 # ==========================================
-col_logo, col_title = st.columns([1, 11])
+# Menggunakan rasio 1:12 agar kolom judul mendapatkan ruang yang sangat luas ke kanan
+col_logo, col_title = st.columns([1, 12]) 
+
 with col_logo:
     try:
-        st.image("logo_lamongan.png", width=60)
+        st.image("logo_lamongan.png", width=65)
     except:
-        st.text("🌐")
+        st.markdown("<h1 style='margin:0;'>🌐</h1>", unsafe_allow_html=True)
+
 with col_title:
-    st.subheader("VISUALISISASI DATA KEPENDUDUKAN")
-    st.caption("KABUPATEN LAMONGAN - DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL")
+    st.markdown("<h2 style='margin:0; padding-top:5px; font-family:sans-serif;'>VISUALISASI DATA KEPENDUDUKAN</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='margin:0; color:gray; font-family:sans-serif;'>KABUPATEN LAMONGAN - DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL</p>", unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ==========================================
 # 4. PEMBAGIAN KOLOM UTAMA (KIRI: FILTER, KANAN: PETA)
 # ==========================================
-# Kolom kiri diset lebih kecil (3) untuk panel kontrol, kolom kanan lebih besar (9) untuk peta
-col_kontrol, col_peta = st.columns([3, 9])
+# Pembagian rasio kolom halaman utama (3 untuk panel kontrol, 8 untuk peta)
+col_kontrol, col_peta = st.columns([3, 8])
 
 # --- PANEL KONTROL SEBELAH KIRI ---
 with col_kontrol:
@@ -115,7 +120,9 @@ with col_kontrol:
     st.checkbox("⚪ Fasilitas Pendidikan", value=False)
     st.checkbox("⚪ Fasilitas Kesehatan", value=False)
     
-    # Aksi data / Download ditaruh di bawah panel kontrol
+    st.markdown(" ")
+    
+    # Tombol Aksi data / Download CSV
     csv_data = df_filter.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Unduh Data (CSV)",
@@ -128,7 +135,7 @@ with col_kontrol:
 # --- PANEL PETA SEBELAH KANAN ---
 with col_peta:
     # Informasi singkat di atas peta (Alert/Info Box)
-    st.info("💡 Batas wilayah administrasi yang digunakan dalam peta ini bersifat indikatif.")
+    st.info("ℹ️ Batas wilayah administrasi yang digunakan dalam peta ini bersifat indikatif.")
     
     # Setup Folium Map
     map_center = [-7.14, 112.33]
@@ -136,14 +143,14 @@ with col_peta:
     
     m = folium.Map(location=map_center, zoom_start=map_zoom, tiles=None, control_scale=True)
     
-    # Menggunakan peta satelit/hybrid agar estetikanya mirip basemap pada gambar
+    # Menggunakan peta hybrid/satelit google agar estetikanya mirip basemap gambar rujukan Anda
     folium.TileLayer(
         tiles='https://google.com{x}&y={y}&z={z}',
         attr='Google Hybrid',
         name='Google Satelit (Hybrid)'
     ).add_to(m)
 
-    # Skema Klasifikasi Warna
+    # Memperbaiki error index colormap_peta yang kosong sebelumnya
     colormap_peta = cm.StepColormap(
         colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
         index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -155,9 +162,9 @@ with col_peta:
         jumlah_pop = fitur['properties'].get('jumlah_penduduk', 0)
         return {
             'fillColor': colormap_peta(jumlah_pop), 
-            'color': '#ff1a1a',  # Outline merah tipis agar mirip dengan gambar contoh
+            'color': '#ff1a1a',  # Batas outline garis berwarna merah tegas seperti di gambar contoh
             'weight': 1.2,           
-            'fillOpacity': 0.4       
+            'fillOpacity': 0.45       
         }
 
     choro_layer = folium.GeoJson(
@@ -168,42 +175,61 @@ with col_peta:
         highlight_function=lambda x: {'weight': 2.5, 'color': '#ffff00', 'fillOpacity': 0.6}
     ).add_to(m)
 
+    # Otomatis zoom ke wilayah terfilter jika data ditemukan
     if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
         if geo_data_filter['features']: 
             bounds = choro_layer.get_bounds()
             m.fit_bounds(bounds) 
 
-    # Fitur pencarian peta
+    # Fitur pencarian teks langsung di dalam peta
     peta_search = Search(
         layer=choro_layer, geom_type="Polygon", placeholder="Cari desa...",
         collapsed=True, position="topright", search_label="KEL_DES", search_zoom=14
     ).add_to(m)
 
-    # Pop-up & Tooltip
+    # Pop-up ketika wilayah peta diklik
     folium.features.GeoJsonPopup(
         fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
-        aliases=["Kecamatan:", "Desa:", "Penduduk:", "Laki-laki:", "Perempuan:"],
+        aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk:", "Laki-laki:", "Perempuan:"],
         labels=True
     ).add_to(choro_layer)
 
+    # Tooltip layang saat kursor menyentuh poligon desa
     folium.features.GeoJsonTooltip(fields=["KEL_DES"], aliases=["Desa: "], labels=False, sticky=True).add_to(choro_layer)
+    
+    # Memasukkan legenda warna ke peta
     colormap_peta.add_to(m)
 
-    # Render peta dengan ukuran penuh di sisi kanan
+    # Render objek peta penuh ke sisi kanan halaman utama
     st_folium(m, width='100%', height=550, returned_objects=[])
 
 # ==========================================
-# 5. TABEL STRUKTUR REKAPITULASI (DI BAGIAN BAWAH)
+# 5. RINGKASAN METRIK & TABEL DATA (DI BAGIAN BAWAH)
 # ==========================================
 st.markdown("---")
-st.markdown("### 📊 Tabel Data Berdasarkan Wilayah")
 
-# Membuat tab ringkasan data agar terlihat rapi dan modular
-tab_tabel, tab_grafik = st.tabs(["📋 Data Tabel Administrasi", "📈 Grafik Perbandingan"])
+# Menghitung metrik agregat
+total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
+total_laki = int(df_filter['Laki-laki'].sum())
+total_perempuan = int(df_filter['Perempuan'].sum())
+total_desa = int(df_filter['Desa'].nunique())
+
+# Menampilkan data ringkasan angka utama di bawah peta
+st.markdown("### 📊 Ringkasan Data Makro Konten")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Total Penduduk", f"{total_penduduk:,} Jiwa")
+m2.metric("Laki-laki", f"{total_laki:,} Jiwa")
+m3.metric("Perempuan", f"{total_perempuan:,} Jiwa")
+m4.metric("Jumlah Wilayah (Desa)", f"{total_desa} Wilayah")
+
+st.markdown(" ")
+
+# Wadah tabel detail administrasi horizontal (melebar penuh)
+st.markdown("### 📋 Tabel Rekapitulasi Data Wilayah")
+tab_tabel, tab_grafik = st.tabs(["Data Tabel Administrasi", "Grafik Perbandingan Demografi"])
 
 with tab_tabel:
     df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
-    # Tampilan tabel melebar penuh di bawah peta
     st.dataframe(df_tabel_tampil, use_container_width=True, height=300)
 
 with tab_grafik:
@@ -211,4 +237,4 @@ with tab_grafik:
         df_chart = df_filter.set_index("Desa")[["Laki-laki", "Perempuan"]]
         st.bar_chart(df_chart, use_container_width=True, height=300)
     else:
-        st.info("💡 Tidak ada data untuk grafik.")
+        st.info("💡 Tidak ada data kependudukan yang tersedia untuk divisualisasikan menjadi grafik berdasarkan filter saat ini.")
