@@ -13,7 +13,7 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan - Leafmap Version"
 # 2. MODIFIKASI PANEL SAMPING (SIDEBAR) & LOGO
 # ==========================================
 with st.sidebar:
-    st.title("🌐 Tentang Aplikasi")
+    st.title("🌐 Tentang Webgis")
     
     # Memasang gambar bola dunia biru yang Anda berikan di sidebar
     logo_globe = "https://i.imgur.com/UbOXYAU.png" 
@@ -22,7 +22,7 @@ with st.sidebar:
     st.info(
         "Aplikasi Dashboard Geospasial Interaktif ini menggabungkan kekuatan framework **Streamlit** "
         "dan pustaka **Leafmap** untuk menyajikan analisis data kependudukan tingkat Desa/Kelurahan "
-        "di wilayah Kabupaten Lamongan secara real-time."
+        "di wilayah Kabupaten / Kota di Indonesia secara real-time."
     )
     st.markdown("---")
     st.write("📌 **Panduan Navigasi Peta:**")
