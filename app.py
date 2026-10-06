@@ -22,7 +22,7 @@ with st.sidebar:
     st.info(
         "Aplikasi Dashboard Geospasial Interaktif ini menggabungkan kekuatan framework **Streamlit** "
         "dan pustaka **Leafmap** untuk menyajikan analisis data kependudukan tingkat Desa/Kelurahan "
-        "di wilayah Kabupaten Lamongan secara real-time."
+        "di wilayah Kabupaten / Kota di indonesia secara real-time."
     )
     st.markdown("---")
     st.write("📌 **Panduan Navigasi Peta:**")
