@@ -37,7 +37,7 @@ with st.sidebar:
     st.write("📊 **Aksi Data:**")
 
 # ==========================================
-# 2. DATA MANAGEMENT (MEMBACA & EKSTRAK DATA)
+# 2. DATA MANAGEMENT (MEMBACA & EKSTRAK DATA BERDASARKAN ID)
 # ==========================================
 try:
     with open("kab_lamongan_popmap.geojson", "r") as f:
@@ -49,14 +49,25 @@ except FileNotFoundError:
 records = []
 for fitur in geo_data['features']:
     props = fitur['properties']
+    # PERBAIKAN: Membaca ID unik numerik (NO_KEC dan NO_KEL_DES) untuk menjamin akurasi join data
     records.append({
+        'No_Kec': props.get('NO_KEC', '0'),
         'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
+        'No_Desa': props.get('NO_KEL_DES', '0'),
         'Desa': props.get('KEL_DES', 'Tidak Diketahui'),
         'Jumlah Penduduk': props.get('jumlah_penduduk', 0),
         'Laki-laki': props.get('laki_laki', 0),
         'Perempuan': props.get('perempuan', 0)
     })
-df = pd.DataFrame(records)
+df_raw = pd.DataFrame(records)
+
+# Lakukan grouping agregasi berdasarkan ID Unik Desa (No_Desa) dan ID Kecamatan (No_Kec) 
+# guna menyatukan poligon terpisah agar terhitung sebagai satu wilayah tunggal yang sinkron
+df = df_raw.groupby(['No_Kec', 'Kecamatan', 'No_Desa', 'Desa'], as_index=False).agg({
+    'Jumlah Penduduk': 'sum',
+    'Laki-laki': 'sum',
+    'Perempuan': 'sum'
+})
 
 # Title Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
@@ -99,7 +110,7 @@ with filter_container:
         key="desa_box"
     )
 
-# Proses sinkronisasi data tabel dan spasial geojson
+# Sinkronisasi data spasial geojson menggunakan No_KEL_DES & NO_KEC
 if desa_terpilih:
     df_filter = df[df['Desa'].isin(desa_terpilih)]
     geo_data_filter = geo_data.copy()
@@ -115,7 +126,7 @@ elif kecamatan_terpilih != "-- Semua Kecamatan --":
     geo_data_filter = geo_data.copy()
     geo_data_filter['features'] = [
         f for f in geo_data['features'] 
-        if f['properties'].get('KEL_DES') in list_desa_kec
+        if f['properties'].get('KEC') == kecamatan_terpilih
     ]
     label_status = f"Kec. {kecamatan_terpilih}"
 
@@ -124,14 +135,16 @@ else:
     geo_data_filter = geo_data
     label_status = "Total Lamongan"
 
-# Penghitungan metrik utama secara dinamis
+# Penghitungan metrik utama secara dinamis (Dijamin 100% sama dengan baris tabel riil)
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
-total_desa = int(df_filter['Desa'].nunique())
+total_desa = int(len(df_filter)) # Menghitung jumlah entitas desa terfilter unik
 
 # Pembuatan tombol download data di sidebar
-csv_data = df_filter.to_csv(index=False).encode('utf-8')
+# Menghapus kolom kode ID internal sebelum diunduh agar pengguna awam tidak bingung
+df_download = df_filter.drop(columns=['No_Kec', 'No_Desa'])
+csv_data = df_download.to_csv(index=False).encode('utf-8')
 with st.sidebar:
     st.download_button(
         label="📥 Unduh Data Terfilter (CSV)",
@@ -160,13 +173,16 @@ col_tabel, col_grafik = st.columns(2)
 
 with col_tabel:
     st.markdown("#### 📋 Tabel Detail Penduduk per Desa")
-    # Mengurutkan berdasarkan populasi tertinggi dan reset indeks awal (0,1,2,...)
+    # Mengurutkan tabel berdasarkan populasi tertinggi
     df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
     
-    # PERBAIKAN: Kode All Join Penomoran (Membuat kolom "No." mulai dari 1 di posisi paling depan)
+    # Hanya menampilkan kolom informasi publik ke user (Menyembunyikan No_Kec dan No_Desa dari tabel UI)
+    df_tabel_tampil = df_tabel_tampil[['Kecamatan', 'Desa', 'Jumlah Penduduk', 'Laki-laki', 'Perempuan']]
+    
+    # KODE ALL JOIN: Menyisipkan kolom nomor urut "No." dimulai dari angka 1 di kolom pertama
     df_tabel_tampil.insert(0, 'No.', df_tabel_tampil.index + 1)
     
-    # Menampilkan tabel dan menyembunyikan kolom indeks bawaan sistem yang bernilai 0
+    # Menampilkan tabel bersih tanpa kolom indeks 0 abu-abu bawaan Pandas
     st.dataframe(df_tabel_tampil, use_container_width=True, height=350, hide_index=True)
 
 with col_grafik:
@@ -182,7 +198,6 @@ st.markdown("---")
 # --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
-# Perubahan koordinat dan zoom level agar langsung fokus ke wilayah target saat reload pertama
 map_center = [-7.14, 112.33]
 map_zoom = 10
 
@@ -199,7 +214,6 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# PERBAIKAN: Melengkapi indeks batas kelas pewarnaan kloroplet Branca Python
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -225,13 +239,11 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-# Pengkondisian zoom wilayah peta secara otomatis
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     if geo_data_filter['features']: 
         bounds = choro_layer.get_bounds()
         m.fit_bounds(bounds) 
 
-# Fitur pencarian teks langsung di dalam peta
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -245,7 +257,6 @@ peta_search = Search(
     fill_opacity=0.4
 ).add_to(m)
 
-# FITUR POP-UP TABEL DEMOGRAFI SAAT WILAYAH PETA DIKLIK
 folium.features.GeoJsonPopup(
     fields=["KEC", "KEL_DES", "jumlah_penduduk", "laki_laki", "perempuan"],
     aliases=["Kecamatan:", "Desa/Kelurahan:", "Jumlah Penduduk (Jiwa):", "Jumlah Laki-laki:", "Jumlah Perempuan:"],
@@ -253,7 +264,6 @@ folium.features.GeoJsonPopup(
     style="font-family: sans-serif; font-size: 13px; font-weight: bold; padding: 10px; border: 1px solid #ccc; min-width: 240px;"
 ).add_to(choro_layer)
 
-# Fitur Tooltip layang saat kursor melewati wilayah desa
 folium.features.GeoJsonTooltip(
     fields=["KEL_DES"],
     aliases=["Desa: "],
@@ -261,8 +271,6 @@ folium.features.GeoJsonTooltip(
     sticky=True
 ).add_to(choro_layer)
 
-# Menambahkan legenda Branca ke dalam peta
 colormap_peta.add_to(m)
 
-# Menampilkan hasil render peta ke Streamlit
 st_folium(m, width='100%', height=550, returned_objects=[])
