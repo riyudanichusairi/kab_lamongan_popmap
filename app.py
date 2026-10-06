@@ -49,7 +49,6 @@ except FileNotFoundError:
 records = []
 for fitur in geo_data['features']:
     props = fitur['properties']
-    # PERBAIKAN: Membaca ID unik numerik (NO_KEC dan NO_KEL_DES) untuk menjamin akurasi join data
     records.append({
         'No_Kec': props.get('NO_KEC', '0'),
         'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
@@ -61,29 +60,25 @@ for fitur in geo_data['features']:
     })
 df_raw = pd.DataFrame(records)
 
-# Lakukan grouping agregasi berdasarkan ID Unik Desa (No_Desa) dan ID Kecamatan (No_Kec) 
-# guna menyatukan poligon terpisah agar terhitung sebagai satu wilayah tunggal yang sinkron
 df = df_raw.groupby(['No_Kec', 'Kecamatan', 'No_Desa', 'Desa'], as_index=False).agg({
     'Jumlah Penduduk': 'sum',
     'Laki-laki': 'sum',
     'Perempuan': 'sum'
 })
 
-# Title Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
 # 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
 # ==========================================
 filter_container = st.container()
-
 daftar_kecamatan = sorted(df['Kecamatan'].unique())
 
 if 'kec_key' not in st.session_state:
     st.session_state.kec_key = "-- Semua Kecamatan --"
 
 # ==========================================
-# 4. LOGIKA FILTERING DATA UNTUK SEMUA ELEMEN
+# 4. LOGIKA FILTERING DATA & BOUNDS (DIURUTKAN AGAR PERHITUNGAN PAS)
 # ==========================================
 with filter_container:
     st.markdown("---")
@@ -122,7 +117,6 @@ if desa_terpilih:
 
 elif kecamatan_terpilih != "-- Semua Kecamatan --":
     df_filter = df_kec
-    list_desa_kec = df_kec['Desa'].tolist()
     geo_data_filter = geo_data.copy()
     geo_data_filter['features'] = [
         f for f in geo_data['features'] 
@@ -135,14 +129,36 @@ else:
     geo_data_filter = geo_data
     label_status = "Total Lamongan"
 
-# Penghitungan metrik utama secara dinamis (Dijamin 100% sama dengan baris tabel riil)
+# --- PERBAIKAN UTAMA: HITUNG BATAS KOORDINAT (BOUNDS) SECARA MANUAL DARI GEOJSON TERFILTER ---
+def hitung_bounds_geojson(geojson_data):
+    coords = []
+    for feature in geojson_data['features']:
+        geom = feature['geometry']
+        if geom['type'] == 'Polygon':
+            for ring in geom['coordinates']:
+                coords.extend(ring)
+        elif geom['type'] == 'MultiPolygon':
+            for poly in geom['coordinates']:
+                for ring in poly:
+                    coords.extend(ring)
+    if coords:
+        # Folium menggunakan format [lat, lon], sedangkan GeoJSON menggunakan [lon, lat]
+        lons, lats = zip(*coords)
+        return [[min(lats), min(lons)], [max(lats), max(lons)]]
+    return None
+
+# Tentukan koordinat target zoom berdasarkan filter aktif
+lokasi_bounds = None
+if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
+    lokasi_bounds = hitung_bounds_geojson(geo_data_filter)
+
+# Penghitungan metrik utama secara dinamis
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
-total_desa = int(len(df_filter)) # Menghitung jumlah entitas desa terfilter unik
+total_desa = int(len(df_filter))
 
 # Pembuatan tombol download data di sidebar
-# Menghapus kolom kode ID internal sebelum diunduh agar pengguna awam tidak bingung
 df_download = df_filter.drop(columns=['No_Kec', 'No_Desa'])
 csv_data = df_download.to_csv(index=False).encode('utf-8')
 with st.sidebar:
@@ -173,16 +189,9 @@ col_tabel, col_grafik = st.columns(2)
 
 with col_tabel:
     st.markdown("#### 📋 Tabel Detail Penduduk per Desa")
-    # Mengurutkan tabel berdasarkan populasi tertinggi
     df_tabel_tampil = df_filter.sort_values(by="Jumlah Penduduk", ascending=False).reset_index(drop=True)
-    
-    # Hanya menampilkan kolom informasi publik ke user (Menyembunyikan No_Kec dan No_Desa dari tabel UI)
     df_tabel_tampil = df_tabel_tampil[['Kecamatan', 'Desa', 'Jumlah Penduduk', 'Laki-laki', 'Perempuan']]
-    
-    # KODE ALL JOIN: Menyisipkan kolom nomor urut "No." dimulai dari angka 1 di kolom pertama
     df_tabel_tampil.insert(0, 'No.', df_tabel_tampil.index + 1)
-    
-    # Menampilkan tabel bersih tanpa kolom indeks 0 abu-abu bawaan Pandas
     st.dataframe(df_tabel_tampil, use_container_width=True, height=350, hide_index=True)
 
 with col_grafik:
@@ -195,12 +204,13 @@ with col_grafik:
 
 st.markdown("---")
 
-# --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
+# --- POSISI 3: PETA INTERAKTIF KLOROPLET ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 map_center = [-7.14, 112.33]
 map_zoom = 10
 
+# Inisialisasi Peta
 m = folium.Map(
     location=map_center, 
     zoom_start=map_zoom, 
@@ -239,11 +249,6 @@ choro_layer = folium.GeoJson(
     highlight_function=lambda x: {'weight': 2.5, 'color': '#ff7800', 'fillOpacity': 0.9}
 ).add_to(m)
 
-if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
-    if geo_data_filter['features']: 
-        bounds = choro_layer.get_bounds()
-        m.fit_bounds(bounds) 
-
 peta_search = Search(
     layer=choro_layer,
     geom_type="Polygon",
@@ -273,4 +278,9 @@ folium.features.GeoJsonTooltip(
 
 colormap_peta.add_to(m)
 
-st_folium(m, width='100%', height=550, returned_objects=[])
+# --- PERBAIKAN UTAMA: MEMASUKKAN BOUNDS DENGAN AMAN KE DALAM st_folium ---
+# Menggunakan parameter 'bounds' bawaan st_folium agar peta otomatis berpindah posisi
+st_folium(
+    m, 
+    width='100%', 
+    height=550, 
