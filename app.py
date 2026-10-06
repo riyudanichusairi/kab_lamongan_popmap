@@ -13,10 +13,11 @@ st.set_page_config(layout="wide", page_title="WebGIS Lamongan - Leafmap Version"
 # 2. MODIFIKASI PANEL SAMPING (SIDEBAR) & LOGO
 # ==========================================
 with st.sidebar:
-    st.title("🌐 Tentang Aplikasi")
+    # Mengubah judul keterangan sesuai permintaan
+    st.title("🌐 Tentang Webgis")
     
     # Memasang gambar bola dunia biru yang Anda berikan di sidebar
-    logo_globe = "https://i.imgur.com/UbOXYAU.png" 
+    logo_globe = "https://imgur.com" 
     st.image(logo_globe, use_container_width=True)
     
     st.info(
