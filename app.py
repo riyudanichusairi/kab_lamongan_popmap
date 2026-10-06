@@ -72,7 +72,7 @@ st.markdown("---")
 # ==========================================
 # 4. PEMBAGIAN KOLOM UTAMA (KIRI: FILTER, KANAN: PETA)
 # ==========================================
-col_kontrol, col_peta = st.columns()
+col_kontrol, col_peta = st.columns([3, 8])
 
 # --- PANEL KONTROL SEBELAH KIRI ---
 with col_kontrol:
@@ -218,17 +218,11 @@ with col_peta:
 # ==========================================
 st.markdown("---")
 
-# Kalkulasi nilai metrik agregat
-if not df_filter.empty:
-    total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
-    total_laki = int(df_filter['Laki-laki'].sum())
-    total_perempuan = int(df_filter['Perempuan'].sum())
-    total_desa = int(df_filter['Desa'].nunique())
-else:
-    total_penduduk = 0
-    total_laki = 0
-    total_perempuan = 0
-    total_desa = 0
+# Menggunakan inline-statement aman tanpa blok percabangan indentasi rawan error
+total_penduduk = int(df_filter['Jumlah Penduduk'].sum()) if not df_filter.empty else 0
+total_laki = int(df_filter['Laki-laki'].sum()) if not df_filter.empty else 0
+total_perempuan = int(df_filter['Perempuan'].sum()) if not df_filter.empty else 0
+total_desa = int(df_filter['Desa'].nunique()) if not df_filter.empty else 0
 
 # Menampilkan data ringkasan angka utama di bawah peta
 st.markdown("### 📊 Ringkasan Data Makro Konten")
