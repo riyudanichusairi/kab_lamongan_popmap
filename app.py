@@ -49,7 +49,6 @@ except FileNotFoundError:
 records = []
 for fitur in geo_data['features']:
     props = fitur['properties']
-    # PERBAIKAN: Membaca ID unik numerik (NO_KEC dan NO_KEL_DES) untuk menjamin akurasi join data
     records.append({
         'No_Kec': props.get('NO_KEC', '0'),
         'Kecamatan': props.get('KEC', 'Tidak Diketahui'),
@@ -61,28 +60,25 @@ for fitur in geo_data['features']:
     })
 df_raw = pd.DataFrame(records)
 
-# Lakukan grouping agregasi berdasarkan ID Unik Desa (No_Desa) dan ID Kecamatan (No_Kec) 
 df = df_raw.groupby(['No_Kec', 'Kecamatan', 'No_Desa', 'Desa'], as_index=False).agg({
     'Jumlah Penduduk': 'sum',
     'Laki-laki': 'sum',
     'Perempuan': 'sum'
 })
 
-# Title Aplikasi
 st.title("Dashboard WebGIS Kepadatan Penduduk Kabupaten Lamongan 2024")
 
 # ==========================================
 # 3. WIDGET FILTER (DEKLARASI CONTAINER PLACEHOLDER)
 # ==========================================
 filter_container = st.container()
-
 daftar_kecamatan = sorted(df['Kecamatan'].unique())
 
 if 'kec_key' not in st.session_state:
     st.session_state.kec_key = "-- Semua Kecamatan --"
 
 # ==========================================
-# 4. LOGIKA FILTERING DATA UNTUK SEMUA ELEMEN
+# 4. LOGIKA FILTERING DATA & BOUNDS
 # ==========================================
 with filter_container:
     st.markdown("---")
@@ -109,7 +105,6 @@ with filter_container:
         key="desa_box"
     )
 
-# Sinkronisasi data spasial geojson menggunakan No_KEL_DES & NO_KEC
 if desa_terpilih:
     df_filter = df[df['Desa'].isin(desa_terpilih)]
     geo_data_filter = geo_data.copy()
@@ -133,7 +128,6 @@ else:
     geo_data_filter = geo_data
     label_status = "Total Lamongan"
 
-# --- LOGIKA HITUNG BATAS KOORDINAT (BOUNDS) DARI GEOJSON TERFILTER UNTUK AUTO-ZOOM ---
 def hitung_bounds_geojson(geojson_data):
     coords = []
     for feature in geojson_data['features']:
@@ -146,23 +140,19 @@ def hitung_bounds_geojson(geojson_data):
                 for ring in poly:
                     coords.extend(ring)
     if coords:
-        # Peta Folium menggunakan format [lat, lon], sedangkan GeoJSON menggunakan [lon, lat]
         lons, lats = zip(*coords)
         return [[min(lats), min(lons)], [max(lats), max(lons)]]
     return None
 
-# Tentukan koordinat target zoom berdasarkan area aktif terfilter
 lokasi_bounds = None
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     lokasi_bounds = hitung_bounds_geojson(geo_data_filter)
 
-# Penghitungan metrik utama secara dinamis
 total_penduduk = int(df_filter['Jumlah Penduduk'].sum())
 total_laki = int(df_filter['Laki-laki'].sum())
 total_perempuan = int(df_filter['Perempuan'].sum())
 total_desa = int(len(df_filter)) 
 
-# Pembuatan tombol download data di sidebar
 df_download = df_filter.drop(columns=['No_Kec', 'No_Desa'])
 csv_data = df_download.to_csv(index=False).encode('utf-8')
 with st.sidebar:
@@ -177,7 +167,6 @@ with st.sidebar:
 # 5. MENAMPILKAN ELEMEN VISUAL 
 # ==========================================
 
-# --- POSISI 1: KARTU METRIK DI ATAS ---
 st.markdown("### 📊 Ringkasan Data Konten")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Total Penduduk", f"{total_penduduk:,} Jiwa")
@@ -187,7 +176,6 @@ m4.metric("Jumlah Wilayah (Desa)", f"{total_desa} Wilayah")
 
 st.markdown("---")
 
-# --- POSISI 2: TABEL & GRAFIK (DI TENGAH) ---
 st.markdown("### 📈 Analisis dan Detail Data Terfilter")
 col_tabel, col_grafik = st.columns(2)
 
@@ -208,7 +196,6 @@ with col_grafik:
 
 st.markdown("---")
 
-# --- POSISI 3: PETA INTERAKTIF KLOROPLET (DI PALING BAWAH) ---
 st.markdown("### 🗺️ Peta Interaktif Kloroplet Desa")
 
 map_center = [-7.14, 112.33]
@@ -227,7 +214,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# PERBAIKAN: Mengisi kembali list index yang kosong agar tidak memicu SyntaxError
+# DIBAWAH INI ADALAH PARSING INDEX YANG SUDAH DIPERBAIKI PENUH:
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000], 
@@ -277,3 +264,15 @@ folium.features.GeoJsonTooltip(
     fields=["KEL_DES"],
     aliases=["Desa: "],
     labels=False,
+    sticky=True
+).add_to(choro_layer)
+
+colormap_peta.add_to(m)
+
+st_folium(
+    m, 
+    width='100%', 
+    height=550, 
+    returned_objects=[],
+    bounds=lokasi_bounds if lokasi_bounds else None
+)
