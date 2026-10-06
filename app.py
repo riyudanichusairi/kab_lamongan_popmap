@@ -168,7 +168,7 @@ with col_peta:
     )
 
     def ganti_warna(fitur):
-        jumlah_pop = Server_pop = fitur.get('properties', {}).get('jumlah_penduduk', 0)
+        jumlah_pop = fitur.get('properties', {}).get('jumlah_penduduk', 0)
         return {
             'fillColor': colormap_peta(jumlah_pop), 
             'color': '#ff1a1a',  # Outline batas merah tegas sesuai referensi gambar
@@ -225,7 +225,10 @@ if not df_filter.empty:
     total_perempuan = int(df_filter['Perempuan'].sum())
     total_desa = int(df_filter['Desa'].nunique())
 else:
-    total_penduduk, total_laki, total_perempuan, total_desa = 0, 0, 0, 0
+    total_penduduk = 0
+    total_laki = 0
+    total_perempuan = 0
+    total_desa = 0
 
 # Menampilkan data ringkasan angka utama di bawah peta
 st.markdown("### 📊 Ringkasan Data Makro Konten")
