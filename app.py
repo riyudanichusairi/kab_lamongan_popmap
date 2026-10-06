@@ -51,27 +51,28 @@ else:
     df = pd.DataFrame(records)
 
 # ==========================================
-# 3. HEADER APLIKASI (SINKRON & PROPORSIONAL)
+# 3. HEADER APLIKASI (PERBAIKAN FLEXBOX AGAR TIDAK TERPOTONG)
 # ==========================================
-# Pembagian kolom logo dan teks judul utama
-col_logo, col_title = st.columns([1, 15]) 
-
-with col_logo:
-    try:
-        st.image("logo_lamongan.png", width=65)
-    except:
-        st.markdown("<h1 style='margin:0;'>🌐</h1>", unsafe_allow_html=True)
-
-with col_title:
-    st.markdown("<h2 style='margin:0; padding-top:5px; font-family:sans-serif;'>VISUALISASI DATA KEPENDUDUKAN</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='margin:0; color:gray; font-family:sans-serif;'>KABUPATEN LAMONGAN - DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL</p>", unsafe_allow_html=True)
+st.markdown("""
+    <div style="display: flex; align-items: center; gap: 20px; padding: 10px 0; margin-bottom: 10px;">
+        <img src="https://wikimedia.org" width="65" style="object-fit: contain;">
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="margin: 0; padding: 0; line-height: 1.3; font-family: sans-serif; font-size: 28px; font-weight: bold; color: #1E1E1E;">
+                VISUALISASI DATA KEPENDUDUKAN
+            </h2>
+            <p style="margin: 5px 0 0 0; padding: 0; line-height: 1; color: #666666; font-family: sans-serif; font-size: 14px; letter-spacing: 0.5px;">
+                KABUPATEN LAMONGAN - DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL
+            </p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ==========================================
 # 4. PEMBAGIAN KOLOM UTAMA (KIRI: FILTER, KANAN: PETA)
 # ==========================================
-col_kontrol, col_peta = st.columns([3, 8])
+col_kontrol, col_peta = st.columns()
 
 # --- PANEL KONTROL SEBELAH KIRI ---
 with col_kontrol:
@@ -158,7 +159,7 @@ with col_peta:
         name='Google Satelit (Hybrid)'
     ).add_to(m)
 
-    # Skema Legenda Warna Kloroplet (Telah Diperbaiki Nilai Indeksnya)
+    # Skema Legenda Warna Kloroplet
     colormap_peta = cm.StepColormap(
         colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
         index=[0, 1000, 2000, 3000, 4500, 6000, 10000],
@@ -167,7 +168,7 @@ with col_peta:
     )
 
     def ganti_warna(fitur):
-        jumlah_pop = fitur.get('properties', {}).get('jumlah_penduduk', 0)
+        jumlah_pop = Server_pop = fitur.get('properties', {}).get('jumlah_penduduk', 0)
         return {
             'fillColor': colormap_peta(jumlah_pop), 
             'color': '#ff1a1a',  # Outline batas merah tegas sesuai referensi gambar
@@ -252,4 +253,3 @@ with tab_grafik:
         df_chart = df_filter.set_index("Desa")[["Laki-laki", "Perempuan"]]
         st.bar_chart(df_chart, use_container_width=True, height=300)
     else:
-        st.info("💡 Tidak ada data kependudukan yang tersedia untuk divisualisasikan menjadi grafik.")
