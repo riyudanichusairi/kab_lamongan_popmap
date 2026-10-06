@@ -16,7 +16,7 @@ with st.sidebar:
     st.title("🌐 Tentang Aplikasi")
     
     # Memasang gambar bola dunia biru yang Anda berikan di sidebar
-    logo_globe = "https://imgur.com" 
+    logo_globe = "https://i.imgur.com/UbOXYAU.png" 
     st.image(logo_globe, use_container_width=True)
     
     st.info(
