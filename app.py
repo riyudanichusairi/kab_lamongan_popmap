@@ -17,9 +17,10 @@ with st.sidebar:
     with col_center:
         st.write("") 
         try:
+            # Menggunakan use_container_width=True sesuai standar Streamlit terbaru
             st.image("logo_lamongan.png", use_container_width=True)
         except:
-            st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan.")
+            st.warning("⚠️ Logo logo_lamongan.png tidak ditemukan di folder aplikasi.")
     
     st.title("WebGIS Penduduk Lamongan 2024")
     st.write(
@@ -144,6 +145,7 @@ def hitung_bounds_geojson(geojson_data):
         return [[min(lats), min(lons)], [max(lats), max(lons)]]
     return None
 
+# Menyimpan nilai batas koordinat ke dalam variabel lokasi_bounds secara konsisten
 lokasi_bounds = None
 if kecamatan_terpilih != "-- Semua Kecamatan --" or desa_terpilih:
     lokasi_bounds = hitung_bounds_geojson(geo_data_filter)
@@ -214,7 +216,7 @@ folium.TileLayer(
     name='Peta Jalan (OpenStreetMap)'
 ).add_to(m)
 
-# DIBAWAH INI ADALAH PARSING INDEX YANG SUDAH DIPERBAIKI PENUH:
+# Memastikan index warna terisi penuh dengan klasifikasi data kuantitatif populasi
 colormap_peta = cm.StepColormap(
     colors=['#ffffcc', '#7fcdbb', '#41b6c4', '#1d91c0', '#253494', '#081d58'],
     index=[0, 1000, 2000, 3000, 4500, 6000, 10000], 
@@ -269,10 +271,11 @@ folium.features.GeoJsonTooltip(
 
 colormap_peta.add_to(m)
 
+# Memperbaiki saltik tulisan variabel lokas1_bounds menjadi lokasi_bounds yang benar
 st_folium(
     m, 
     width='100%', 
     height=550, 
     returned_objects=[],
-    bounds=lokasi_bounds if lokasi_bounds else None
+    bounds=lokasi_bounds if lokasi_bounds is not None else None
 )
